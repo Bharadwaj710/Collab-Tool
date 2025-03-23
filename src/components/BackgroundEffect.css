@@ -1,0 +1,16 @@
+.background-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1; 
+    overflow: hidden;
+  }
+  
+  .background-element {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 223, 0, 0.5); 
+    pointer-events: none; 
+  }

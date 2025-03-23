@@ -43,11 +43,11 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-container">
-      {/* Add BackgroundEffect and pass the createButtonRef */}
+      {}
 
       <div className="dashboard-header">
         <h2>My Documents</h2>
-        {/* Attach the ref to the "Create New Document" button */}
+        {}
         <button className="create-btn" onClick={createNewDocument} ref={createButtonRef}>
           Create New Document
         </button>
