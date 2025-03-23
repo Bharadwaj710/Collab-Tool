@@ -1,0 +1,61 @@
+/* Navbar container */
+.navbar {
+    background-color: #e1782dd8 !important; /* Brown color with !important to override Bootstrap */
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+}
+
+/* Navbar brand */
+.navbar-brand {
+    color: #fff !important; /* White text for the brand */
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.navbar-brand:hover {
+    color: #f5deb3 !important; /* Lighter brown for hover effect */
+}
+
+/* Navbar links */
+.navbar-nav .nav-link {
+    color: #fff !important; /* White text for links */
+    font-size: 1rem;
+    margin-right: 1rem;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover {
+    color: #f5deb3 !important; /* Lighter brown for hover effect */
+}
+
+/* Navbar toggler */
+.navbar-toggler {
+    border: none;
+    background-color: #fff; /* White background for toggler */
+}
+
+.navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Cpath stroke='rgba%2880, 80, 80, 1%29' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E");
+}
+
+/* Logout button */
+.btn-link {
+    color: #fff !important; /* White text for logout button */
+    text-decoration: none;
+    font-size: 1rem;
+    transition: color 0.3s ease;
+}
+
+.btn-link:hover {
+    color: #f5deb3 !important; /* Lighter brown for hover effect */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .navbar-nav .nav-link {
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+    }
+}

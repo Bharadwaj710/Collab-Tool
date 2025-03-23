@@ -1,0 +1,171 @@
+.landing-container {
+    flex: 1;
+    background: url('file:///C:/Users/bhara/Downloads/f31b5901-c20c-4d50-80b8-c5212c276ca9.svg'); /* Replace with your image path */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+    min-height: 90vh;
+}
+
+/* Interactive Background Styles */
+.background-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.background-element {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle at center, rgba(0, 140, 255, 0.584), rgba(255, 115, 0, 0.605));
+    pointer-events: none; /* Prevent interaction with the circles */
+    transition: transform 1.5s ease, opacity 1.5s ease; /* Smooth transitions */
+    animation: float 6s infinite ease-in-out; /* Add floating animation */
+}
+
+/* Floating animation for subtle movement */
+@keyframes float {
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+    50% {
+        transform: translate(10px, -10px) scale(1.1); /* Slight movement and scaling */
+    }
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+}
+
+.landing-content {
+    max-width: 800px;
+    text-align: center;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background-color: transparent;
+    position: relative;
+    z-index: 1;
+}
+
+.landing-title {
+    font-size: 2.5rem;
+    color: #333333;
+    margin-bottom: 1.5rem;
+    min-height: 3.5rem; /* Ensures consistent height even during typing */
+    position: relative;
+    white-space: pre-wrap; /* Preserve line breaks */
+    text-align: center;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+}
+
+/* Typing cursor effect */
+.cursor {
+    display: inline-block;
+    width: 3px;
+    height: 42px;
+    background-color: #333;
+    margin-left: 4px;
+    vertical-align: middle;
+    animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+    from,
+    to {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0;
+    }
+}
+
+.landing-description {
+    font-size: 1.1rem;
+    color: #555;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400;
+}
+
+.landing-subtext {
+    font-size: 1rem;
+    color: #666;
+    margin-bottom: 2rem;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400;
+}
+
+.landing-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.btn {
+    padding: 0.7rem 1.8rem;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    position: relative;
+    z-index: 2;
+}
+
+.btn-primary {
+    background-color: #ff7b00;
+    color: white;
+    border: none;
+}
+
+.btn-primary:hover {
+    background-color: #f0a205;
+    color: white;
+}
+
+/* Media queries for responsive design */
+@media (max-width: 768px) {
+    .landing-content {
+        padding: 2rem;
+    }
+
+    .landing-title {
+        font-size: 2rem;
+    }
+
+    .cursor {
+        height: 32px;
+    }
+}
+
+@media (max-width: 480px) {
+    .landing-content {
+        padding: 1.5rem;
+    }
+
+    .landing-buttons {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    .cursor {
+        height: 28px;
+    }
+}
