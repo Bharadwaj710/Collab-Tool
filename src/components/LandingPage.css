@@ -1,6 +1,6 @@
 .landing-container {
     flex: 1;
-    background: url('file:///C:/Users/bhara/Downloads/f31b5901-c20c-4d50-80b8-c5212c276ca9.svg'); 
+    background-image: url('/images/Background.svg'); 
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
