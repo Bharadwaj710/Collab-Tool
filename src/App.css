@@ -5,6 +5,16 @@
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+.placeholder-page {
+  max-width: 1200px;
+  margin: 120px auto 0;
+  padding: 3rem;
+  text-align: center;
+  background-color: #f7fafc;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
 .app {
   min-height: 100vh;
   display: flex;

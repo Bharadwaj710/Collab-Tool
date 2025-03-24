@@ -9,61 +9,138 @@
     min-height: 100vh; /* Ensures the background covers the full viewport height */
     color: #333;
 }
+
+
   
-  .dashboard-header {
+.dashboard-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
   }
   
   .dashboard-header h2 {
-    color: #333;
-    font-size: 1.8rem;
+    font-size: 1.5rem;
+    color: #2d3748;
+    margin: 0;
   }
   
   .create-btn {
-    background-color: #ff9100;
+    background-color: #4299e1;
     color: white;
     border: none;
-    padding: 0.6rem 1.2rem;
+    padding: 0.5rem 1rem;
     border-radius: 4px;
-    font-size: 1rem;
+    font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.2s;
-    border-radius: 2rem;
+    transition: background-color 0.2s ease;
   }
   
   .create-btn:hover {
-    background-color: #29292a;
-  }
-
-  .create-btn:hover ~ .welcome-text,
-  .create-btn:hover ~ .sub-text {
-    color: rgb(180, 12, 12);
-    visibility: visible;
+    background-color: #3182ce;
   }
   
+  /* Tab Navigation */
+  .dashboard-tabs {
+    display: flex;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 2rem;
+  }
+  
+  .tab-button {
+    background: none;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+    color: #718096;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+  }
+  
+  .tab-button:hover {
+    color: #4a5568;
+  }
+  
+  .tab-button.active {
+    color: #4299e1;
+    border-bottom: 2px solid #4299e1;
+    font-weight: 500;
+  }
+  
+  /* Feature Buttons */
+  .feature-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .feature-button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.25rem 1rem;
+    cursor: pointer;
+    flex: 1;
+    transition: all 0.2s ease;
+  }
+  
+  .feature-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border-color: #cbd5e0;
+  }
+  
+  .feature-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #ebf4ff;
+  }
+  
+  .feature-button span {
+    font-size: 0.9rem;
+    color: #4a5568;
+    font-weight: 500;
+  }
+  
+  .video-icon::before {
+    content: "📹";
+  }
+  
+  .chat-icon::before {
+    content: "💬";
+  }
+  
+  .share-icon::before {
+    content: "🔗";
+  }
+  
+  .analytics-icon::before {
+    content: "📊";
+  }
+  
+  /* Existing styles */
   .loading {
     text-align: center;
     padding: 2rem;
-    color: #6c757d;
-    font-size: 1.1rem;
+    color: #718096;
   }
   
   .no-documents {
     text-align: center;
-    padding: 3rem;
-    background-color: #f8f9fa;
+    padding: 2rem;
+    color: #718096;
+    background-color: #f7fafc;
     border-radius: 8px;
-    color: #6c757d;
-  }
-  
-  .documents-list {
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
   }
   
   .documents-table {
@@ -75,47 +152,39 @@
   .documents-table td {
     padding: 1rem;
     text-align: left;
-    border-bottom: 1px solid #e9ecef;
+    border-bottom: 1px solid #e2e8f0;
   }
   
   .documents-table th {
-    background-color: #f8f9fa;
     font-weight: 600;
-    color: #495057;
+    color: #4a5568;
+    background-color: #f7fafc;
+  }
+  
+  .documents-table tr:hover {
+    background-color: #f7fafc;
   }
   
   .action-btn {
-    margin-right: 0.5rem;
-    padding: 0.4rem 0.8rem;
-    border: none;
+    padding: 0.25rem 0.75rem;
     border-radius: 4px;
+    font-size: 0.8rem;
+    margin-right: 0.5rem;
     cursor: pointer;
-    font-size: 0.9rem;
+    border: none;
   }
   
-  .edit {
-    background-color: #ff9100;
+  .action-btn.edit {
+    background-color: #4299e1;
     color: white;
   }
   
-  .share {
-    background-color: #a98888;
+  .action-btn.share {
+    background-color: #38b2ac;
     color: white;
   }
   
-  .delete {
-    background-color: #949494;
+  .action-btn.delete {
+    background-color: #e53e3e;
     color: white;
-  }
-  
-  .edit:hover {
-    background-color: #e19d0b99;
-  }
-  
-  .share:hover {
-    background-color: #a56d6d;
-  }
-  
-  .delete:hover {
-    background-color: #c82333;
   }
