@@ -1,17 +1,14 @@
-import React, { useState, useRef } from 'react'; // Import useRef
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Auth.css';
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: ''
   });
   const [error, setError] = useState('');
   const navigate = useNavigate();
-
-  // Define loginButtonRef
-  const loginButtonRef = useRef(null);
 
   const handleChange = (e) => {
     setFormData({
@@ -36,35 +33,35 @@ const Login = () => {
 
   return (
     <div className="auth-container">
-      {/* Pass loginButtonRef to BackgroundEffect */}
       <div className="auth-form-container">
         <h2>Login to CollabTool</h2>
         {error && <div className="auth-error">{error}</div>}
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="email">Username</label>
             <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
+              type="text"
+              id="username"
+              name="username"
+              value={formData.username}
               onChange={handleChange}
+              placeholder=" " 
               required
             />
+            <label htmlFor="username">Username</label>
           </div>
           <div className="form-group">
-            <label htmlFor="password">Password</label>
             <input
               type="password"
               id="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
+              placeholder=" " 
               required
             />
+            <label htmlFor="password">Password</label>
           </div>
-          {/* Attach the ref to the login button */}
-          <button type="submit" className="auth-button" ref={loginButtonRef}>
+          <button type="submit" className="auth-button">
             Login
           </button>
         </form>
