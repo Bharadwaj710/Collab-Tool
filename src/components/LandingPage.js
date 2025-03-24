@@ -6,8 +6,6 @@ import BackgroundEffect from './BackgroundEffect';
 const LandingPage = () => {
   const backgroundContainerRef = useRef(null);
   const startButtonRef = useRef(null);
-  const elements = useRef([]);
-  const elementCount = 2;
     const [displayText, setDisplayText] = useState('');
   const fullText = 'Welcome to \n CollabTool';
   

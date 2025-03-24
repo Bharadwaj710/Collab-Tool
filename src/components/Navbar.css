@@ -2,7 +2,8 @@
 .navbar {
     background-color: #e1782dd8 !important; 
     padding: 1rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 1000; 
 }
 
 

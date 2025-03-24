@@ -10,6 +10,26 @@
     position: relative;
     overflow: hidden;
     min-height: 90vh;
+    z-index: 1;
+}
+/* Ensure smooth transition for text color */
+.landing-title,
+.landing-description,
+.landing-subtext {
+  transition: color 0.3s ease;
+}
+
+/* Change text color to white when hovering over the button */
+.btn.btn-primary:hover ~ .landing-title,
+.btn.btn-primary:hover ~ .landing-description,
+.btn.btn-primary:hover ~ .landing-subtext {
+  color: white;
+}
+
+.start-for-free-btn:hover ~ .welcome-text,
+.start-for-free-btn:hover ~ .sub-text {
+    color: rgb(180, 12, 12);
+    visibility: visible;
 }
 
 .background-container {
@@ -20,15 +40,6 @@
     height: 100%;
     z-index: 0;
     overflow: hidden;
-}
-
-.background-element {
-    position: absolute;
-    border-radius: 50%;
-    background: radial-gradient(circle at center, rgba(0, 140, 255, 0.584), rgba(255, 115, 0, 0.605));
-    pointer-events: none; 
-    transition: transform 1.5s ease, opacity 1.5s ease; 
-    animation: float 6s infinite ease-in-out; 
 }
 
 

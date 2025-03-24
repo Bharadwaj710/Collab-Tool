@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Auth.css';
+import BackgroundEffect from './BackgroundEffect';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -11,6 +12,7 @@ const Register = () => {
   });
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const registerButtonRef = useRef(null); // Reference for the register button
 
   const handleChange = (e) => {
     setFormData({
@@ -21,17 +23,15 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
-    
+
     // Here you would implement the actual registration logic with your backend
     try {
-      // Placeholder for actual API call
       console.log('Registration data submitted:', formData);
-      // Redirect to dashboard on success
       navigate('/dashboard');
     } catch (err) {
       setError('Registration failed. Please try again.');
@@ -41,6 +41,9 @@ const Register = () => {
 
   return (
     <div className="auth-container">
+      {/* Add the BackgroundEffect component */}
+      <BackgroundEffect targetButtonRef={registerButtonRef} />
+
       <div className="auth-form-container">
         <h2>Create an Account</h2>
         {error && <div className="auth-error">{error}</div>}
@@ -91,7 +94,9 @@ const Register = () => {
               minLength="6"
             />
           </div>
-          <button type="submit" className="auth-button">Register</button>
+          <button type="submit" className="auth-button" ref={registerButtonRef}>
+            Register
+          </button>
         </form>
         <p className="auth-redirect">
           Already have an account? <Link to="/login">Login</Link>

@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState,useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Auth.css';
+import BackgroundEffect from './BackgroundEffect';
 
 const Login = () => {
+    const loginButtonRef = useRef(null);
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -33,6 +35,7 @@ const Login = () => {
 
   return (
     <div className="auth-container">
+        <BackgroundEffect targetButtonRef={loginButtonRef} />
       <div className="auth-form-container">
         <h2>Login to CollabTool</h2>
         {error && <div className="auth-error">{error}</div>}

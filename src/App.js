@@ -7,6 +7,7 @@ import Navbar from './components/Navbar';
 import DocumentForm from './components/DocumentForm';
 import DocumentDetails from './components/DocumentDetails';
 import LandingPage from './components/LandingPage';
+import Document from './components/Document';
 import './App.css';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
                 <Route path="/login" element={<Login/>} />
                 <Route path="/register" element={<Register/>} />
                 <Route path="/dashboard" element={<Dashboard/>} />
+                <Route path="/document/:id" element={<Document />} />
                 <Route path="/document/:id" element={<DocumentDetails/>} />
                 <Route path="/document/new" element={<DocumentForm />} />
             </Routes>

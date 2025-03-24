@@ -35,7 +35,13 @@
   }
   
   .create-btn:hover {
-    background-color: #b3d0ee;
+    background-color: #29292a;
+  }
+
+  .create-btn:hover ~ .welcome-text,
+  .create-btn:hover ~ .sub-text {
+    color: rgb(180, 12, 12);
+    visibility: visible;
   }
   
   .loading {
