@@ -1,13 +1,8 @@
 .auth-container {
-    background-image: url('/images/Background.svg'); 
+    background-image: url('../Assets/Background.svg'); 
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: #333; 
 }
 
 .auth-form-container {

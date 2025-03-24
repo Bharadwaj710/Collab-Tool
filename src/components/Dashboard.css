@@ -2,12 +2,10 @@
     padding: 2rem;
     max-width: 1200px;
     margin: 0 auto;
-    background-image: url('/images/Background.svg'); 
+    background-image: url('../Assets/Background.svg'); 
     background-size: cover; 
     background-position: center; 
     background-repeat: no-repeat; 
-    min-height: 100vh; 
-    color: #333; 
 }
   
   .dashboard-header {

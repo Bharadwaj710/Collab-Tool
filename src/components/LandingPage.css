@@ -1,16 +1,8 @@
 .landing-container {
-    flex: 1;
-    background-image: url('/images/Background.svg'); 
+    background-image: url('../Assets/Background.svg'); 
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 2rem;
-    position: relative;
-    overflow: hidden;
-    min-height: 90vh;
 }
 
 .background-container {
