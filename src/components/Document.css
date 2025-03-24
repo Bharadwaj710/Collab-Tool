@@ -178,3 +178,41 @@
   .message-text {
     font-size: 14px;
   }
+  /* Styling for the join code input and button */
+.join-code-container {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+  }
+  
+  .join-code-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px 0 0 4px;
+    font-size: 14px;
+    outline: none;
+  }
+  
+  .join-code-input:focus {
+    border-color: #9c27b0;
+    box-shadow: 0 0 0 1px rgba(156, 39, 176, 0.2);
+  }
+  
+  .join-button {
+    background-color: #9b27b027;
+    color: rgba(223, 218, 218, 0.119);
+    border-radius: 0 4px 4px 0;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    height: 100%;
+  }
+  
+  .join-button:hover {
+    background-color: #7b1fa2;
+  }
+  
+  .join-button:active {
+    background-color: #6a1b9a;
+  }
