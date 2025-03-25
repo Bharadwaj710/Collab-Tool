@@ -1,11 +1,18 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Navbar.css';
+import * as bootstrap from 'bootstrap';
 
 const Navbar = () => {
     const navigate = useNavigate();
     const userString = localStorage.getItem('user');
     const user = userString ? JSON.parse(userString) : null;
+
+    useEffect(() => {
+        // Initialize Bootstrap dropdown
+        const dropdownElementList = document.querySelectorAll('.dropdown-toggle');
+        const dropdownList = [...dropdownElementList].map(dropdownToggleEl => new bootstrap.Dropdown(dropdownToggleEl));
+    }, []);
 
     const handleLogout = () => {
         localStorage.removeItem('user');
