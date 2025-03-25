@@ -1,4 +1,3 @@
-
 .navbar {
     background-color: #e1782dd8 !important; 
     padding: 1rem;
@@ -55,8 +54,15 @@
 
 
 @media (max-width: 768px) {
+    .navbar-nav {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
     .navbar-nav .nav-link {
         margin-right: 0;
         margin-bottom: 0.5rem;
+        width: 100%; /* Ensure full width for better visibility */
+        text-align: left; /* Align text to the left */
     }
 }
