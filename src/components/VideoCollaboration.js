@@ -149,7 +149,7 @@ const VideoCollaboration = () => {
 
   return (
     <div className="video-collab-container">
-      {/* Header with document info and controls */}
+      {}
       <div className="video-header">
         <div className="left-header">
           <h2>Video Collaboration</h2>
@@ -209,7 +209,7 @@ const VideoCollaboration = () => {
         </div>
       </div>
       
-      {/* Feature Buttons - Only visible when toggled */}
+      {}
       {showFeatures && (
         <div className="feature-buttons">
           <button 
@@ -250,9 +250,9 @@ const VideoCollaboration = () => {
         </div>
       )}
       
-      {/* Main content area with flexible layout */}
+      {}
       <div className="main-content-area">
-        {/* Editor/Chat/History panel based on active tab */}
+        {}
         <div className="content-panel">
           {activeTab === 'editor' && (
             <div className="document-editor">
@@ -328,11 +328,11 @@ const VideoCollaboration = () => {
           )}
         </div>
         
-        {/* Collaboration panel with videos */}
+        {}
         {showCollaborationPanel && (
           <div className="collaboration-panel">
             <div className="video-grid">
-              {/* Local video */}
+              {}
               <div className="video-container local-video">
                 <div className={`video-frame ${isVideoOff ? 'video-off' : ''} ${selectedUser === null ? 'selected' : ''}`}
                     onClick={() => setSelectedUser(null)}>
@@ -353,7 +353,7 @@ const VideoCollaboration = () => {
                 </div>
               </div>
               
-              {/* Remote participants */}
+              {}
               {participants.map(participant => (
                 <div key={participant.id} className="video-container">
                   <div 
@@ -378,7 +378,7 @@ const VideoCollaboration = () => {
               ))}
             </div>
             
-            {/* Video controls */}
+            {}
             <div className="video-controls">
               <button 
                 className={`control-btn ${isMuted ? 'active' : ''}`} 
@@ -410,7 +410,7 @@ const VideoCollaboration = () => {
               </button>
             </div>
             
-            {/* Participants list */}
+            {}
             <div className="participants-panel">
               <h3>Participants</h3>
               <ul className="participants-list">
@@ -453,7 +453,7 @@ const VideoCollaboration = () => {
         )}
       </div>
       
-      {/* Screen sharing indicator */}
+      {}
       {isScreenSharing && (
         <div className="screen-sharing-indicator">
           You are currently sharing your screen

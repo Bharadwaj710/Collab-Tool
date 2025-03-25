@@ -109,7 +109,7 @@ const Dashboard = () => {
         </div>
       </div>
       
-      {/* Tab Navigation */}
+      {}
       <div className="dashboard-tabs">
         <button 
           className={`tab-button ${activeTab === 'recent' ? 'active' : ''}`}
@@ -137,7 +137,7 @@ const Dashboard = () => {
         </button>
       </div>
       
-      {/* Feature Buttons */}
+      {}
       <div className="feature-buttons">
         <button 
           className="feature-button" 

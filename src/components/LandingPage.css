@@ -12,14 +12,14 @@
     min-height: 90vh;
     z-index: 1;
 }
-/* Ensure smooth transition for text color */
+
 .landing-title,
 .landing-description,
 .landing-subtext {
   transition: color 0.3s ease;
 }
 
-/* Change text color to white when hovering over the button */
+
 .btn.btn-primary:hover ~ .landing-title,
 .btn.btn-primary:hover ~ .landing-description,
 .btn.btn-primary:hover ~ .landing-subtext {

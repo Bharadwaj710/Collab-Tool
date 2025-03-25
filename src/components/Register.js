@@ -41,7 +41,7 @@ const Register = () => {
 
   return (
     <div className="auth-container">
-      {/* Add the BackgroundEffect component */}
+      {}
       <BackgroundEffect targetButtonRef={registerButtonRef} />
 
       <div className="auth-form-container">
