@@ -7,9 +7,3 @@
     
   }
   
-  .background-element {
-    position: absolute;
-    border-radius: 50%;
-    background: #e1782d7c; 
-    transition: transform 0.3s ease, opacity 0.3s ease, box-shadow 0.3s ease;
-  }
