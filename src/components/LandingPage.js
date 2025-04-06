@@ -1,13 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import './LandingPage.css';
-import BackgroundEffect from './BackgroundEffect';
+import BackgroundEffect from './BackgroundEffect.js';
 
 const LandingPage = () => {
   const backgroundContainerRef = useRef(null);
   const startButtonRef = useRef(null);
     const [displayText, setDisplayText] = useState('');
-  const fullText = 'Welcome to \n CollabTool';
+    const fullText = [
+      'Collaborate with \n ',
+      <span key="ease" style={{ backgroundColor: '#e1782dd8', color: '#ffffff', padding: '0 4px' }}>
+        Ease
+      </span>,
+      '.'
+    ];
   
   useEffect(() => {
     let currentIndex = 0;
@@ -18,7 +24,7 @@ const LandingPage = () => {
       } else {
         clearInterval(typingInterval);
       }
-    }, 100);
+    }, 498);
     
     return () => clearInterval(typingInterval);
   }, []);
@@ -31,6 +37,7 @@ const LandingPage = () => {
       <h1 className="landing-title">
           {displayText}
           <span className="cursor"></span>
+          <span className="ease"></span>
         </h1>
         <p className="landing-description">
           CollabTool is your go-to platform for seamless real-time collaboration. 

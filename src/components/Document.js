@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import VideoCollaboration from '../components/VideoCollaboration';
+import VideoCollaboration from './VideoCollaboration.js';
 import './Document.css';
 
 const Document = () => {
@@ -55,7 +55,7 @@ const Document = () => {
             <div className="link-container">
               <input 
                 type="text" 
-                value={`https://jigsawcollab.vercel.app/document/${id}`} 
+                value={`https://collabTool2.vercel.app/document/${id}`} 
                 readOnly 
               />
               <button className="copy-btn">□</button>

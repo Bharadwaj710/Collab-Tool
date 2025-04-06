@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import "./Dashboard.css";
 
 const Dashboard = () => {
@@ -39,15 +40,13 @@ const Dashboard = () => {
     });
   };
 
-  const createNewDocument = () => {
-    // Redirect to video collaboration page with a new document
-    console.log('Creating new document and redirecting to video collaboration');
-    navigate('/document/1', { 
-      state: { 
-        isNewDocument: true,
-        documentTitle: 'Untitled Document'
-      } 
-    });
+  const handleCreateDocument = async () => {
+    try {
+      const response = await axios.post('/api/documents/create', { title: 'Untitled Document' });
+      navigate(`/document/${response.data.id}`);
+    } catch (error) {
+      console.error('Error creating document:', error);
+    }
   };
 
   const handleJoinSession = (e) => {
@@ -93,7 +92,7 @@ const Dashboard = () => {
       <div className="dashboard-header">
         <h2>My Documents</h2>
         <div className="header-actions">
-          <button className="create-btn" onClick={createNewDocument} ref={createButtonRef}>
+          <button className="create-btn" onClick={handleCreateDocument} ref={createButtonRef}>
             Create New Document
           </button>
           <form className="join-form" onSubmit={handleJoinSession}>

@@ -1,14 +1,16 @@
 import React, { useEffect, useRef } from 'react';
 import './BackgroundEffect.css';
+import { right } from '@popperjs/core';
+
 
 const BackgroundEffect = ({ targetButtonRef }) => {
   const backgroundContainerRef = useRef(null);
   const elements = useRef([]);
   const elementPositions = [
-    { left: '20%', top: '30%' }, // Fixed positions for circles
-    { left: '40%', top: '50%' },
+    { left: '0%', top: '0%',
+      left: '20%', right: '20%'}, // Fixed positions for circles
   ];
-  const elementSize = 2000; // Fixed size for all circles
+  const elementSize = 1000; // Fixed size for all circles
 
   useEffect(() => {
     const createBackgroundElements = () => {

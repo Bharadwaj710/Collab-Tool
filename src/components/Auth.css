@@ -7,7 +7,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    color: #333;
+    background-color: var(--bg-dark-900);
     z-index: 1;
 }
 
@@ -18,7 +18,7 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     width: 100%;
     max-width: 450px;
-    color: white; 
+    color: rgb(31, 29, 29); 
     z-index: 2;
 }
 

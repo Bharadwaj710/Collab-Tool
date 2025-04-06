@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { getDocumentById, updateDocument, deleteDocument } from '../services/documentService';
+import { getDocumentById, updateDocument, deleteDocument } from '../services/documentService.js';
 import { io } from 'socket.io-client';
 
 
@@ -83,41 +83,72 @@ const DocumentDetails = () => {
     if (!document) return <div>Loading...</div>;
 
     return (
-        <div className="container mt-5">
-            {message && <div className="alert alert-success mt-3">{message}</div>}
-            <h2 className="mb-4">Document Details</h2>
-            <div className="form-group">
-                <label htmlFor="title">Title:</label>
-                <input
-                    type="text"
-                    id="title"
-                    className="form-control"
-                    value={title}
-                    onChange={(e) => {setTitle(e.target.value);
-                        socket.emit('documentUpdate', { documentId: id, title: e.target.value, content });
-                    }}
-                />
-            </div>
-            <div className="form-group mt-3">
-                <label htmlFor="content">Content:</label>
-                <textarea
-                    id="content"
-                    className="form-control"
-                    rows="5"
-                    value={content}
-                    onChange={(e) => {
-                        setContent(e.target.value);
-                        socket.emit('documentUpdate', { documentId: id, title, content: e.target.value });
-                    }}
-                />
-            </div>
-            {successMessage && <div className="alert alert-success mt-3">{successMessage}</div>}
-
-            <div className="mt-3">
-                <button className="btn btn-primary" onClick={handleUpdate}>Update Document</button>
-                <button className="btn btn-danger ms-2" onClick={handleDelete}>Delete Document</button>
-            </div>
+      <div className="container mt-5">
+        {message && <div className="alert alert-success mt-3">{message}</div>}
+        <h2 className="mb-4">Document Details</h2>
+        <div className="form-group">
+          <label htmlFor="title">Title:</label>
+          <input
+            type="text"
+            id="title"
+            className="form-control form-control-lg"
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              socket.emit("documentUpdate", {
+                documentId: id,
+                title: e.target.value,
+                content,
+              });
+            }}
+          />
         </div>
+        <div className="form-group mt-3">
+          <label htmlFor="content">Content:</label>
+          <textarea
+            id="content"
+            className="form-control form-control-lg"
+            rows="5"
+            value={content}
+            onChange={(e) => {
+              setContent(e.target.value);
+              socket.emit("documentUpdate", {
+                documentId: id,
+                title,
+                content: e.target.value,
+              });
+            }}
+          />
+        </div>
+        {successMessage && (
+          <div className="alert alert-success mt-3">{successMessage}</div>
+        )}
+
+        <div className="mt-3">
+          <button
+            className="btn btn-lg mb-3"
+            style={{
+              backgroundColor: "#FFAF00",
+              color: "white",
+              borderRadius: "12px",
+            }}
+            onClick={handleUpdate}
+          >
+            Update Document
+          </button>
+          <button
+            className="btn btn-lg mb-3 ms-3"
+            style={{
+              backgroundColor: "#F5004F",
+              color: "white",
+              borderRadius: "12px",
+            }}
+            onClick={handleDelete}
+          >
+            Delete Document
+          </button>
+        </div>
+      </div>
     );
 };
 

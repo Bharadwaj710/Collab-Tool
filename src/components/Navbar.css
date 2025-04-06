@@ -54,6 +54,10 @@
 
 
 @media (max-width: 768px) {
+    .navbar-collapse {
+        max-height: 80vh;
+        overflow-y: auto;
+      }
     .navbar-nav {
         display: flex;
         flex-direction: column;

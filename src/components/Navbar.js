@@ -20,7 +20,7 @@ const Navbar = () => {
     };
 
     return (
-        <nav className="navbar navbar-expand-lg navbar-light bg-light">
+        <nav className="navbar navbar-expand-lg navbar-light">
             <div className="container-fluid">
                 <Link className="navbar-brand" to="/">CollabTool</Link>
                 <button
@@ -46,7 +46,7 @@ const Navbar = () => {
                     {user ? (
                         <ul className="navbar-nav">
                             <li className="nav-item">
-                                <button className="btn btn-link nav-link" onClick={handleLogout}>
+                                <button className="btn-link nav-link" onClick={handleLogout}>
                                     {user.username} Logout
                                 </button>
                             </li>

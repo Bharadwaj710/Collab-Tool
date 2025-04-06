@@ -207,6 +207,7 @@
     cursor: pointer;
     transition: background-color 0.2s;
     height: 100%;
+    gap: 2px;
   }
   
   .join-button:hover {
