@@ -1,211 +1,145 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import "./Dashboard.css";
 
 const Dashboard = () => {
-  const [documents, setDocuments] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('recent');
-  const [joinCode, setJoinCode] = useState('');
-  const navigate = useNavigate();
+    const [documents, setDocuments] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const navigate = useNavigate();
+    const location = useLocation();
 
-  // Define a ref for the "Create New Document" button
-  const createButtonRef = useRef(null);
+    const fetchDocuments = async () => {
+        try {
+            setLoading(true);
+            const userStr = localStorage.getItem('user');
+            if (!userStr) {
+                console.log('No user found in localStorage');
+                setDocuments([]);
+                setLoading(false);
+                return;
+            }
+            
+            const user = JSON.parse(userStr);
+            const token = user ? user.token : null;
+            
+            if (!token) {
+                console.log('Invalid user data or missing token');
+                setDocuments([]);
+                setLoading(false);
+                return;
+            }
 
-  useEffect(() => {
-    // Simulate API call to fetch user's documents
-    const fetchDocuments = () => {
-      setTimeout(() => {
-        const dummyDocuments = [
-          { id: 1, title: 'Project Proposal', updatedAt: '2025-03-15T14:22:00Z', collaborators: 3 },
-          { id: 2, title: 'Meeting Notes', updatedAt: '2025-03-18T09:45:00Z', collaborators: 2 },
-          { id: 3, title: 'Marketing Strategy', updatedAt: '2025-03-20T11:30:00Z', collaborators: 5 }
-        ];
-        
-        setDocuments(dummyDocuments);
-        setIsLoading(false);
-      }, 1000);
+            const { data } = await axios.get('http://localhost:5000/api/documents', {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                timeout: 5000
+            });
+            
+            setDocuments(data);
+            setError(null);
+            setLoading(false);
+        } catch (error) {
+            console.error('Failed to fetch documents:', error);
+            setDocuments([]);
+            setError('Warning: Backend connection issue. Some features may not work properly.');
+            setLoading(false);
+        }
     };
-    
-    fetchDocuments();
-  }, []);
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
+    useEffect(() => {
+        fetchDocuments();
+        
+        // Listen for document creation events
+        const handleDocumentCreated = () => {
+            fetchDocuments();
+        };
+        
+        window.addEventListener('documentCreated', handleDocumentCreated);
+        
+        return () => {
+            window.removeEventListener('documentCreated', handleDocumentCreated);
+        };
+    }, []);
 
-  const handleCreateDocument = async () => {
-    try {
-      const response = await axios.post('/api/documents/create', { title: 'Untitled Document' });
-      navigate(`/document/${response.data.id}`);
-    } catch (error) {
-      console.error('Error creating document:', error);
-    }
-  };
+    // Check for refresh state from navigation
+    useEffect(() => {
+        if (location.state?.refresh) {
+            fetchDocuments();
+            // Clear the state
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location.state, navigate]);
 
-  const handleJoinSession = (e) => {
-    e.preventDefault();
-    if (joinCode.trim()) {
-      console.log(`Joining session with code: ${joinCode}`);
-      navigate('/video-collaboration', { 
-        state: { 
-          isJoining: true,
-          joinCode: joinCode
-        } 
-      });
-    }
-  };
-
-  const handleDocumentClick = (id) => {
-    navigate(`/document/${id}`);
-  };
-
-  const handleFeatureClick = (feature) => {
-    console.log(`Feature clicked: ${feature}`);
-    // Handle different features
-    switch(feature) {
-      case 'video':
-        navigate('/video-collaboration');
-        break;
-      case 'chat':
-        navigate('/chat');
-        break;
-      case 'share':
-        navigate('/share-documents');
-        break;
-      case 'analytics':
-        navigate('/analytics');
-        break;
-      default:
-        break;
-    }
-  };
-
-  return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <h2>My Documents</h2>
-        <div className="header-actions">
-          <button className="create-btn" onClick={handleCreateDocument} ref={createButtonRef}>
-            Create New Document
-          </button>
-          <form className="join-form" onSubmit={handleJoinSession}>
-            <input 
-              type="text" 
-              placeholder="Enter join code" 
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value)}
-              className="join-code-input"
-            />
-            <button type="submit" className="join-btn">Join</button>
-          </form>
-        </div>
-      </div>
-      
-      {}
-      <div className="dashboard-tabs">
-        <button 
-          className={`tab-button ${activeTab === 'recent' ? 'active' : ''}`}
-          onClick={() => setActiveTab('recent')}
-        >
-          Recent Documents
-        </button>
-        <button 
-          className={`tab-button ${activeTab === 'shared' ? 'active' : ''}`}
-          onClick={() => setActiveTab('shared')}
-        >
-          Shared With Me
-        </button>
-        <button 
-          className={`tab-button ${activeTab === 'favorites' ? 'active' : ''}`}
-          onClick={() => setActiveTab('favorites')}
-        >
-          Favorites
-        </button>
-        <button 
-          className={`tab-button ${activeTab === 'archive' ? 'active' : ''}`}
-          onClick={() => setActiveTab('archive')}
-        >
-          Archived
-        </button>
-      </div>
-      
-      {}
-      <div className="feature-buttons">
-        <button 
-          className="feature-button" 
-          onClick={() => handleFeatureClick('video')}
-        >
-          <div className="feature-icon video-icon"></div>
-          <span>Video Collaboration</span>
-        </button>
-        <button 
-          className="feature-button"
-          onClick={() => handleFeatureClick('chat')}
-        >
-          <div className="feature-icon chat-icon"></div>
-          <span>Chat</span>
-        </button>
-        <button 
-          className="feature-button"
-          onClick={() => handleFeatureClick('share')}
-        >
-          <div className="feature-icon share-icon"></div>
-          <span>Share Documents</span>
-        </button>
-        <button 
-          className="feature-button"
-          onClick={() => handleFeatureClick('analytics')}
-        >
-          <div className="feature-icon analytics-icon"></div>
-          <span>Analytics</span>
-        </button>
-      </div>
-      
-      {isLoading ? (
-        <div className="loading">Loading your documents...</div>
-      ) : (
-        <div className="documents-list">
-          {documents.length === 0 ? (
-            <div className="no-documents">
-              <p>You don't have any documents yet. Create your first one!</p>
+    if (loading) {
+        return (
+            <div className="container text-center mt-5">
+                <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </div>
+                <p>Loading your documents...</p>
             </div>
-          ) : (
-            <table className="documents-table">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Last Updated</th>
-                  <th>Collaborators</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {documents.map(doc => (
-                  <tr key={doc.id} onClick={() => handleDocumentClick(doc.id)} style={{cursor: 'pointer'}}>
-                    <td>{doc.title}</td>
-                    <td>{formatDate(doc.updatedAt)}</td>
-                    <td>{doc.collaborators}</td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <button className="action-btn edit" onClick={() => navigate(`/document/${doc.id}`)}>Edit</button>
-                      <button className="action-btn share">Share</button>
-                      <button className="action-btn delete">Delete</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+        );
+    }
+
+    return (
+        <div className="container">
+            <h2 className="my-4">Dashboard</h2>
+            
+            {error && (
+                <div className="alert alert-warning mb-4">
+                    {error}
+                </div>
+            )}
+            
+            {documents.length === 0 && !error ? (
+                <div className="alert alert-info mb-4">
+                    You don't have any documents yet. Create your first document below!
+                </div>
+            ) : (
+                <div className="row mb-4">
+                    {documents.map((doc) => (
+                        <div key={doc._id} className="col-md-4 mb-4">
+                            <div className="card h-100">
+                                <div className="card-body d-flex flex-column">
+                                    <h5 className="card-title">{doc.title}</h5>
+                                    <p className="card-text">
+                                        Created on: {new Date(doc.createdAt).toLocaleDateString()}
+                                    </p>
+                                    <Link
+                                        to={`/document/${doc._id}`}
+                                        className="btn btn-lg w-100 mb-3 mt-auto"
+                                        style={{
+                                            backgroundColor: "#FFAF00",
+                                            color: "white",
+                                            borderRadius: "12px",
+                                        }}
+                                    >
+                                        Open Document
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+            
+            <div className="text-center mt-4">
+                <button
+                    className="btn btn-lg mb-3"
+                    style={{
+                        backgroundColor: "#F5004F",
+                        color: "white",
+                        borderRadius: "12px",
+                    }}
+                    onClick={() => navigate("/document/new")}
+                >
+                    Create New Document
+                </button>
+            </div>
         </div>
-      )}
-    </div>
-  );
+    );
 };
 
 export default Dashboard;
