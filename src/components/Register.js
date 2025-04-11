@@ -19,8 +19,8 @@ const Register = () => {
 
     // Check if user is already logged in
     useEffect(() => {
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (user && user.token) {
+        const token = localStorage.getItem('token');
+        if (token) {
             navigate('/dashboard');
         }
     }, [navigate]);
@@ -46,14 +46,18 @@ const Register = () => {
         try {
             // For testing purposes we'll manually create a user object
             // This will bypass API registration until we fix backend issues
-            const mockUser = {
+            const mockToken = 'temp-token-' + Math.random().toString(36).substring(2, 15);
+            
+            // Store token directly in localStorage
+            localStorage.setItem('token', mockToken);
+            
+            // Also store user data separately
+            localStorage.setItem('user', JSON.stringify({
                 name: formData.name,
                 email: formData.email,
                 username: formData.username,
-                token: 'temp-token-' + Math.random().toString(36).substring(2, 15)
-            };
-            
-            localStorage.setItem('user', JSON.stringify(mockUser));
+                token: mockToken
+            }));
             
             // Wait a bit to simulate network latency
             setTimeout(() => {
@@ -70,7 +74,10 @@ const Register = () => {
                 password: formData.password
             });
             
-            // Save user data to localStorage
+            // Store token directly in localStorage
+            localStorage.setItem('token', response.data.token);
+            
+            // Also store user data separately
             localStorage.setItem('user', JSON.stringify({
                 username: formData.username,
                 token: response.data.token
@@ -85,17 +92,13 @@ const Register = () => {
             
             // Enhanced error handling to show more specific errors
             if (err.response) {
-                // The request was made and the server responded with a status code
-                // that falls out of the range of 2xx
                 console.error('Error response:', err.response.data);
                 console.error('Status code:', err.response.status);
                 setError(`Registration failed: ${err.response.data.message || err.response.statusText}`);
             } else if (err.request) {
-                // The request was made but no response was received
                 console.error('No response received:', err.request);
                 setError('No response from server. Please check your internet connection.');
             } else {
-                // Something happened in setting up the request that triggered an Error
                 console.error('Request error:', err.message);
                 setError(`Request error: ${err.message}`);
             }

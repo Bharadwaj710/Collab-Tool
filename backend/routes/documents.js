@@ -1,74 +1,171 @@
 const express = require('express');
-const Document = require('../models/Document');
-const { verifyToken } = require('../middleware/auth');
 const router = express.Router();
+const mongoose = require('mongoose');
+const Document = require('../models/Document');
+const auth = require('../middleware/auth');
 
-// Get all documents for the logged-in user
-router.get('/', verifyToken, async (req, res) => {
-    try {
-        //const documents = await Document.find({ owner: req.user.id });
-        const documents = await Document.find({});
-        res.json(documents);
-    } catch (error) {
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
-// Get a single document by ID
-router.get('/:id', verifyToken, async (req, res) => {
-    try {
-        const document = await Document.findById(req.params.id);
-        if (!document) {
-            return res.status(404).json({ message: 'Document not found' });
-        }
-        // if (document.owner.toString() !== req.user.id) {
-        //     return res.status(403).json({ message: 'Not authorized' });
-        // }
-        res.json(document);
-    } catch (error) {
-        console.error('Error fetching document:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
+// Get all documents for a user
+router.get('/', auth, async (req, res) => {
+  try {
+    const documents = await Document.find({
+      $or: [
+        { owner: req.user.id },
+        { collaborators: req.user.id }
+      ]
+    }).sort({ updatedAt: -1 });
+    
+    res.json(documents);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
 });
 
 // Create a new document
-router.post('/', verifyToken, async (req, res) => {
-    const { title, content } = req.body;
-    try {
-        const newDocument = await Document.create({
-            title,
-            content,
-            owner: req.user.id,
-        });
-        res.json(newDocument);
-    } catch (error) {
-        res.status(500).json({ message: 'Server error' });
-    }
+router.post('/', auth, async (req, res) => {
+  try {
+    const { title } = req.body;
+    
+    const newDocument = new Document({
+      title: title || `Untitled Document - ${new Date().toLocaleDateString()}`,
+      owner: req.user.id,
+      content: { ops: [{ insert: '\n' }] } // Empty Quill document
+    });
+    
+    const document = await newDocument.save();
+    res.json(document);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
 });
 
-// Update a document
-router.put('/:id', verifyToken, async (req, res) => {
-    const { title, content } = req.body;
-    try {
-        const updatedDocument = await Document.findByIdAndUpdate(
-            req.params.id,
-            { title, content },
-            { new: true }
-        );
-        res.json(updatedDocument);
-    } catch (error) {
-        res.status(500).json({ message: 'Server error' });
+// Get a specific document
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const document = await Document.findById(req.params.id);
+    
+    // Check if document exists
+    if (!document) {
+      return res.status(404).json({ msg: 'Document not found' });
     }
+    
+    // Check if user has access to document
+    if (document.owner.toString() !== req.user.id && 
+        !document.collaborators.includes(req.user.id)) {
+      return res.status(403).json({ msg: 'Access denied' });
+    }
+    
+    res.json(document);
+  } catch (err) {
+    console.error(err.message);
+    
+    // Check if ID is valid
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'Document not found' });
+    }
+    
+    res.status(500).send('Server error');
+  }
+});
+
+// Update document content
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const { content, title } = req.body;
+    
+    // Find document
+    let document = await Document.findById(req.params.id);
+    
+    // Check if document exists
+    if (!document) {
+      return res.status(404).json({ msg: 'Document not found' });
+    }
+    
+    // Check if user has access
+    if (document.owner.toString() !== req.user.id && 
+        !document.collaborators.includes(req.user.id)) {
+      return res.status(403).json({ msg: 'Access denied' });
+    }
+    
+    // Update fields
+    if (content) document.content = content;
+    if (title) document.title = title;
+    document.updatedAt = new Date();
+    
+    await document.save();
+    res.json(document);
+  } catch (err) {
+    console.error(err.message);
+    
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'Document not found' });
+    }
+    
+    res.status(500).send('Server error');
+  }
+});
+
+// Add collaborator to document
+router.post('/:id/collaborators', auth, async (req, res) => {
+  try {
+    const { collaboratorId } = req.body;
+    
+    // Find document
+    const document = await Document.findById(req.params.id);
+    
+    // Check if document exists
+    if (!document) {
+      return res.status(404).json({ msg: 'Document not found' });
+    }
+    
+    // Check if user is the owner
+    if (document.owner.toString() !== req.user.id) {
+      return res.status(403).json({ msg: 'Only the owner can add collaborators' });
+    }
+    
+    // Check if collaborator is already added
+    if (document.collaborators.includes(collaboratorId)) {
+      return res.status(400).json({ msg: 'User is already a collaborator' });
+    }
+    
+    // Add collaborator
+    document.collaborators.push(collaboratorId);
+    await document.save();
+    
+    res.json(document);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
 });
 
 // Delete a document
-router.delete('/:id', verifyToken, async (req, res) => {
-    try {
-        await Document.findByIdAndDelete(req.params.id);
-        res.json({ message: 'Document deleted' });
-    } catch (error) {
-        res.status(500).json({ message: 'Server error' });
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const document = await Document.findById(req.params.id);
+    
+    // Check if document exists
+    if (!document) {
+      return res.status(404).json({ msg: 'Document not found' });
     }
+    
+    // Check if user is the owner
+    if (document.owner.toString() !== req.user.id) {
+      return res.status(403).json({ msg: 'Only the owner can delete this document' });
+    }
+    
+    await document.remove();
+    res.json({ msg: 'Document removed' });
+  } catch (err) {
+    console.error(err.message);
+    
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'Document not found' });
+    }
+    
+    res.status(500).send('Server error');
+  }
 });
 
 module.exports = router;

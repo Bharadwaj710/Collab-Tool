@@ -16,8 +16,8 @@ const Login = () => {
 
     // Check if user is already logged in
     useEffect(() => {
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (user && user.token) {
+        const token = localStorage.getItem('token');
+        if (token) {
             navigate('/dashboard');
         }
     }, [navigate]);
@@ -37,12 +37,16 @@ const Login = () => {
         try {
             // For testing purposes, we'll manually log in the user
             // This will bypass API login until we fix backend issues
-            const mockUser = {
-                username: formData.username,
-                token: 'temp-token-' + Math.random().toString(36).substring(2, 15)
-            };
+            const mockToken = 'temp-token-' + Math.random().toString(36).substring(2, 15);
             
-            localStorage.setItem('user', JSON.stringify(mockUser));
+            // Store token directly in localStorage
+            localStorage.setItem('token', mockToken);
+            
+            // Also store user data for reference if needed
+            localStorage.setItem('user', JSON.stringify({
+                username: formData.username,
+                token: mockToken
+            }));
             
             // Wait a bit to simulate network latency
             setTimeout(() => {
@@ -57,7 +61,10 @@ const Login = () => {
                 password: formData.password
             });
             
-            // Save user data to localStorage
+            // Store token directly in localStorage
+            localStorage.setItem('token', response.data.token);
+            
+            // Also store user data separately
             localStorage.setItem('user', JSON.stringify({
                 username: formData.username,
                 token: response.data.token

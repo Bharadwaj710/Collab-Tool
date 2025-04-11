@@ -4,10 +4,9 @@ import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
 import Navbar from './components/Navbar';
-import DocumentForm from './components/DocumentForm';
-import DocumentDetails from './components/DocumentDetails';
 import LandingPage from './components/LandingPage';
-import ProtectedRoute from './components/ProtectedRoute'; // We'll create this component
+import ProtectedRoute from './components/ProtectedRoute';
+import DocumentEditor from './components/DocumentEditor'; // Add this import
 
 function App() {
     return (
@@ -25,14 +24,15 @@ function App() {
                             <Dashboard />
                         </ProtectedRoute>
                     } />
-                    <Route path="/document/:id" element={
+                    {/* New routes for real-time document editing */}
+                    <Route path="/documents/:id" element={
                         <ProtectedRoute>
-                            <DocumentDetails />
+                            <DocumentEditor />
                         </ProtectedRoute>
                     } />
-                    <Route path="/document/new" element={
+                    <Route path="/join/:id" element={
                         <ProtectedRoute>
-                            <DocumentForm />
+                            <DocumentEditor />
                         </ProtectedRoute>
                     } />
                     

@@ -5,8 +5,12 @@ const API_URL = 'http://localhost:5000/api/documents';
 
 const getToken = () => {
     const user = JSON.parse(localStorage.getItem('user'));
-    return user?.token;
-};
+    if (!user?.token) {
+      console.error('No token found in localStorage');
+      throw new Error('Authentication required');
+    }
+    return user.token;
+  };
 
 export const getDocumentById = async (id) => {
     const { data } = await axios.get(`${API_URL}/${id}`, {

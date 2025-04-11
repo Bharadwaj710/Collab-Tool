@@ -1,61 +1,113 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
+const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const auth = require('../middleware/auth');
 
-const router = express.Router();
-
+// Register a new user
 router.post('/register', async (req, res) => {
-  const { name, email, password } = req.body;
-
   try {
-    // Check if the user already exists
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
+    const { username, email, password } = req.body;
+    
+    // Check if user already exists
+    let user = await User.findOne({ email });
+    if (user) {
+      return res.status(400).json({ msg: 'User already exists' });
     }
-
-    // Create a new user with plain password (hashed in the model)
-    const user = new User({ name, email, password });
-    await user.save(); // Hashing is handled by the pre-save hook in the model
-
-    // Generate a JSON Web Token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
+    
+    // Create new user
+    user = new User({
+      username,
+      email,
+      password
     });
-
-    // Respond with the token
-    res.status(201).json({ username: user.username,token:token });
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    
+    await user.save();
+    
+    // Create JWT token
+    const payload = {
+      user: {
+        id: user.id
+      }
+    };
+    
+    jwt.sign(
+      payload,
+      process.env.JWT_SECRET || 'collabtoolsecret',
+      { expiresIn: '24h' },
+      (err, token) => {
+        if (err) throw err;
+        res.json({
+          token,
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email
+          }
+        });
+      }
+    );
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
   }
 });
 
-// POST: Sign In
+// Login user
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-
   try {
+    const { email, password } = req.body;
+    
+    // Check if user exists
     const user = await User.findOne({ email });
-    console.log(user)
     if (!user) {
-      return res.status(400).json({ message: 'Invalid Email' });
+      return res.status(400).json({ msg: 'Invalid credentials' });
     }
-    const isMatch = await bcrypt.compare(password, user.password);
-    console.log('Password Match:', isMatch); // Should log `true` if passwords match
+    
+    // Check password
+    const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-        return res.status(400).json({ message: 'Invalid password' });
+      return res.status(400).json({ msg: 'Invalid credentials' });
     }
-
-
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
-    });
-
-    res.status(201).json({ username: user.name,token:token });
-    console.log(user.name)
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    
+    // Create JWT token
+    const payload = {
+      user: {
+        id: user.id
+      }
+    };
+    
+    jwt.sign(
+      payload,
+      process.env.JWT_SECRET || 'collabtoolsecret',
+      { expiresIn: '24h' },
+      (err, token) => {
+        if (err) throw err;
+        res.json({
+          token,
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email
+          }
+        });
+      }
+    );
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
   }
 });
+
+// Get authenticated user
+router.get('/user', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    res.json(user);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
 module.exports = router;
