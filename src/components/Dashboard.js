@@ -1,132 +1,114 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import ProfileModal from './ProfileModal';
+import { toast } from 'react-toastify';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const Dashboard = () => {
   const [documents, setDocuments] = useState([]);
   const [joinLink, setJoinLink] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
 
-  // Get token directly from localStorage
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    // If no token, redirect to login
-    if (!token) {
+    const user = localStorage.getItem('user');
+    if (!token || !user) {
       navigate('/login');
       return;
     }
 
     const fetchDocuments = async () => {
       try {
-        // Add this console log to verify token is being sent
-        console.log("Fetching documents with token:", token);
-        
+        setIsLoading(true);
         const response = await axios.get(`${API_URL}/api/documents`, {
           headers: { 'x-auth-token': token },
         });
         setDocuments(response.data);
       } catch (error) {
         console.error('Error fetching documents:', error);
-        
-        // Handle unauthorized error
-        if (error.response && error.response.status === 401) {
-          console.log("Token invalid, redirecting to login");
+        if (error.response?.status === 401) {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           navigate('/login');
         }
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    // For testing, simulate document data
-    const mockDocuments = [
-      {
-        _id: 'doc1',
-        title: 'Sample Document 1',
-        updatedAt: new Date().toISOString()
-      },
-      {
-        _id: 'doc2',
-        title: 'Project Notes',
-        updatedAt: new Date(Date.now() - 86400000).toISOString() // 1 day ago
+    fetchDocuments();
+    
+    // Fetch user profile
+    const fetchUserProfile = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/api/users/me`, {
+          headers: { 'x-auth-token': token }
+        });
+        setCurrentUser(response.data);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
       }
-    ];
+    };
     
-    // Comment this out when using real API
-    setDocuments(mockDocuments);
-    
-    // Uncomment when ready to use real API
-    // fetchDocuments();
+    fetchUserProfile();
   }, [token, navigate]);
 
   const handleCreateDocument = async () => {
     try {
-      // Check token availability
       if (!token) {
-        console.log("No token available, redirecting to login");
         navigate('/login');
         return;
       }
       
-      console.log("Creating document...");
-      console.log("Using token:", token);
-      
-      // For testing, simulate document creation
-      const mockDocument = {
-        _id: 'newdoc_' + Math.random().toString(36).substring(2, 9),
-        title: `Untitled Document - ${new Date().toLocaleDateString()}`
-      };
-      
-      // Add to documents state
-      setDocuments([mockDocument, ...documents]);
-      
-      // Simulate navigation to new document
-      navigate(`/documents/${mockDocument._id}`);
-      
-      // Comment out when using fake data
-      /*
+      setIsLoading(true);
       const response = await axios.post(
         `${API_URL}/api/documents`,
         { title: `Untitled Document - ${new Date().toLocaleDateString()}` },
         { headers: { 'x-auth-token': token } }
       );
       
-      console.log("Document created:", response.data);
       navigate(`/documents/${response.data._id}`);
-      */
-      
     } catch (error) {
       console.error('Error creating document:', error);
-      
-      if (error.response && error.response.status === 401) {
-        alert("Your session has expired. Please login again.");
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/login');
-      } else {
-        alert(`Error creating document: ${error.message}`);
-      }
+      alert('Failed to create document');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteDocument = async (e, id) => {
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this document?')) return;
+
+    try {
+      setIsLoading(true);
+      await axios.delete(`${API_URL}/api/documents/${id}`, {
+        headers: { 'x-auth-token': token }
+      });
+      setDocuments(prev => prev.filter(doc => doc._id !== id));
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      alert('Failed to delete document');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleJoinByLink = (e) => {
     e.preventDefault();
-    console.log("Join link:", joinLink);
-    
-    // Better parsing of document ID from link
     let docId;
     if (joinLink.includes('/')) {
       const urlParts = joinLink.split('/');
       docId = urlParts[urlParts.length - 1];
     } else {
-      // If user just pasted an ID directly
       docId = joinLink.trim();
     }
-    
-    console.log("Extracted document ID:", docId);
     
     if (docId) {
       navigate(`/documents/${docId}`);
@@ -138,176 +120,128 @@ const Dashboard = () => {
   const openDocument = (id) => {
     navigate(`/documents/${id}`);
   };
+  
+ const handleProfileSave = async (profileData) => {
+  try {
+    const response = await axios.put(
+      `${API_URL}/api/users/me`,
+      profileData,
+      { headers: { 'x-auth-token': token } }
+    );
+
+    // ✅ SINGLE SOURCE OF TRUTH
+    const updatedUser = response.data;
+
+    setCurrentUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+
+    // 🔥 FORCE NAVBAR + LANDING PAGE UPDATE
+    window.dispatchEvent(new Event('storage'));
+
+    setShowProfileModal(false);
+    toast.success('Profile updated successfully!');
+  } catch (error) {
+    toast.error('Failed to update profile');
+  }
+};
+  
+  const getAvatarUrl = (seed) => {
+    if (!seed) return null;
+    return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(seed)}&backgroundColor=4285f4,34a853,fbbc04,ea4335`;
+  };
 
   return (
-    <div className="dashboard">
-      <style>{`
-        .dashboard {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 2rem;
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+    <div className="dashboard-container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <h1>My Documentation</h1>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            {currentUser && (
+              <div 
+                onClick={() => setShowProfileModal(true)}
+                style={{ 
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem',
+                  borderRadius: '50px',
+                  transition: 'background 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#f1f3f4'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                title={`${currentUser.username} - ${currentUser.email}`}
+              >
+                <img 
+                  src={getAvatarUrl(currentUser.profile?.avatarSeed || currentUser.username)}
+                  alt="Profile"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    border: '2px solid #4285f4'
+                  }}
+                />
+              </div>
+            )}
+            <form onSubmit={handleJoinByLink} style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                    type="text"
+                    placeholder="Document ID or Link"
+                    value={joinLink}
+                    onChange={(e) => setJoinLink(e.target.value)}
+                    className="form-control"
+                    style={{ width: '250px' }}
+                />
+                <button type="submit" className="btn btn-outline-primary">Join Room</button>
+            </form>
+            <button onClick={handleCreateDocument} className="btn btn-primary" disabled={isLoading}>
+                {isLoading ? 'Creating...' : '+ New Document'}
+            </button>
+        </div>
+      </header>
 
-        .dashboard h1 {
-          font-size: 2rem;
-          margin-bottom: 1.5rem;
-          color: #333;
-          border-bottom: 2px solid #eaeaea;
-          padding-bottom: 0.75rem;
-        }
-
-        .dashboard h2 {
-          font-size: 1.5rem;
-          margin: 2rem 0 1rem;
-          color: #444;
-        }
-
-        .document-actions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 1rem;
-          margin-bottom: 2rem;
-          padding: 1.5rem;
-          background-color: #f9f9f9;
-          border-radius: 8px;
-          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .btn {
-          padding: 0.75rem 1.25rem;
-          border: none;
-          border-radius: 5px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .btn-primary {
-          background-color: #4285f4;
-          color: white;
-        }
-
-        .btn-primary:hover {
-          background-color: #3367d6;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .btn-secondary {
-          background-color: #34a853;
-          color: white;
-        }
-
-        .btn-secondary:hover {
-          background-color: #2d8a46;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .join-form {
-          display: flex;
-          flex: 1;
-          min-width: 300px;
-          gap: 0.5rem;
-        }
-
-        .join-form input {
-          flex: 1;
-          padding: 0.75rem;
-          border: 1px solid #ddd;
-          border-radius: 5px;
-          font-size: 1rem;
-        }
-
-        .join-form input:focus {
-          outline: none;
-          border-color: #4285f4;
-          box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
-        }
-
-        .document-list {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 1.5rem;
-        }
-
-        .document-card {
-          padding: 1.5rem;
-          border-radius: 8px;
-          background-color: white;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-          cursor: pointer;
-          transition: all 0.2s ease;
-          border-left: 4px solid #4285f4;
-        }
-
-        .document-card:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .document-card h3 {
-          margin-top: 0;
-          margin-bottom: 0.5rem;
-          font-size: 1.1rem;
-          color: #333;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .document-card p {
-          margin: 0;
-          font-size: 0.85rem;
-          color: #888;
-        }
-
-        @media (max-width: 768px) {
-          .document-actions {
-            flex-direction: column;
-          }
-
-          .join-form {
-            width: 100%;
-          }
-        }
-      `}</style>
-
-      <h1>Dashboard</h1>
-
-      <div className="document-actions">
-        <button onClick={handleCreateDocument} className="btn btn-primary">
-          Create New Document
-        </button>
-
-        <form onSubmit={handleJoinByLink} className="join-form">
-          <input
-            type="text"
-            placeholder="Paste document link or ID"
-            value={joinLink}
-            onChange={(e) => setJoinLink(e.target.value)}
-          />
-          <button type="submit" className="btn btn-secondary">Join</button>
-        </form>
-      </div>
-
-      <h2>Your Documents</h2>
-      {documents.length === 0 ? (
-        <p>No documents found. Create a new one!</p>
+      {documents.length === 0 && !isLoading ? (
+        <div style={{ textAlign: 'center', padding: '3rem', background: '#f8f9fa', borderRadius: '8px' }}>
+            <p>You haven't created any documents yet.</p>
+            <button onClick={handleCreateDocument} className="btn btn-link">Create your first one</button>
+        </div>
       ) : (
-        <div className="document-list">
+        <div className="row g-4">
           {documents.map((doc) => (
-            <div
-              key={doc._id}
-              className="document-card"
-              onClick={() => openDocument(doc._id)}
-            >
-              <h3>{doc.title}</h3>
-              <p>Last updated: {new Date(doc.updatedAt).toLocaleString()}</p>
+            <div key={doc._id} className="col-md-4 col-sm-6">
+              <div 
+                className="card h-100 shadow-sm" 
+                onClick={() => openDocument(doc._id)}
+                style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <div className="card-body">
+                  <h5 className="card-title">{doc.title}</h5>
+                  <p className="card-text text-muted small">
+                    Last updated: {new Date(doc.updatedAt).toLocaleString()}
+                  </p>
+                </div>
+                <div className="card-footer bg-transparent border-0 d-flex justify-content-end">
+                    <button 
+                        onClick={(e) => handleDeleteDocument(e, doc._id)}
+                        className="btn btn-sm btn-outline-danger"
+                    >
+                        Delete
+                    </button>
+                </div>
+              </div>
             </div>
           ))}
         </div>
+      )}
+      
+      {showProfileModal && currentUser && (
+        <ProfileModal 
+          user={currentUser}
+          onClose={() => setShowProfileModal(false)}
+          onSave={handleProfileSave}
+        />
       )}
     </div>
   );

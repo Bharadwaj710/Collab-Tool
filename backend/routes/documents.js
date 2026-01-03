@@ -17,7 +17,7 @@ router.get('/', auth, async (req, res) => {
     res.json(documents);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).json({ msg: 'Server error' });
   }
 });
 
@@ -29,14 +29,27 @@ router.post('/', auth, async (req, res) => {
     const newDocument = new Document({
       title: title || `Untitled Document - ${new Date().toLocaleDateString()}`,
       owner: req.user.id,
-      content: { ops: [{ insert: '\n' }] } // Empty Quill document
+      createdBy: req.user.id,
+      content: { ops: [{ insert: '\n' }] },
+      participants: [{
+        userId: req.user.id,
+        name: 'Creator', // Default name
+        role: 'creator',
+        joinedAt: new Date()
+      }]
     });
+
+    // Fetch user for name consistency if needed
+    const user = await mongoose.model('User').findById(req.user.id);
+    if (user && user.username) {
+      newDocument.participants[0].name = user.username;
+    }
     
     const document = await newDocument.save();
     res.json(document);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).json({ msg: 'Server error' });
   }
 });
 
@@ -65,7 +78,7 @@ router.get('/:id', auth, async (req, res) => {
       return res.status(404).json({ msg: 'Document not found' });
     }
     
-    res.status(500).send('Server error');
+    res.status(500).json({ msg: 'Server error' });
   }
 });
 
@@ -102,7 +115,7 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(404).json({ msg: 'Document not found' });
     }
     
-    res.status(500).send('Server error');
+    res.status(500).json({ msg: 'Server error' });
   }
 });
 
@@ -136,7 +149,7 @@ router.post('/:id/collaborators', auth, async (req, res) => {
     res.json(document);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).json({ msg: 'Server error' });
   }
 });
 
@@ -155,7 +168,7 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(403).json({ msg: 'Only the owner can delete this document' });
     }
     
-    await document.remove();
+    await Document.deleteOne({ _id: req.params.id });
     res.json({ msg: 'Document removed' });
   } catch (err) {
     console.error(err.message);
@@ -164,7 +177,7 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(404).json({ msg: 'Document not found' });
     }
     
-    res.status(500).send('Server error');
+    res.status(500).json({ msg: 'Server error' });
   }
 });
 

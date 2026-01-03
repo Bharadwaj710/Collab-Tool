@@ -9,6 +9,7 @@ const setupSocketHandlers = require('./SocketHandler');
 // Routes
 const authRoutes = require('./routes/auth');
 const documentRoutes = require('./routes/documents');
+const userRoutes = require('./routes/users');
 
 dotenv.config();
 const app = express();
@@ -54,6 +55,7 @@ mongoose.connect(MONGO_URI, {
 
 // API routes
 app.use('/api/users', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/documents', documentRoutes);
 
 // Root route for health check

@@ -9,16 +9,23 @@ router.post('/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
     
-    // Check if user already exists
-    let user = await User.findOne({ email });
+    // Check if user already exists (by email OR username)
+    let user = await User.findOne({ 
+      $or: [
+        { email: email.toLowerCase().trim() },
+        { username: username.trim() }
+      ]
+    });
+
     if (user) {
-      return res.status(400).json({ msg: 'User already exists' });
+      const field = user.email === email.toLowerCase().trim() ? 'Email' : 'Username';
+      return res.status(400).json({ msg: `${field} is already registered` });
     }
     
     // Create new user
     user = new User({
-      username,
-      email,
+      username: username.trim(),
+      email: email.toLowerCase().trim(),
       password
     });
     
@@ -49,23 +56,37 @@ router.post('/register', async (req, res) => {
     );
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).json({ msg: 'Server error' });
   }
 });
 
 // Login user
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { identifier, password } = req.body; // identifier can be email or username
     
-    // Check if user exists
-    const user = await User.findOne({ email });
+    // Check if user exists (by email or username) - Case Insensitive
+    const loginIdentifier = identifier.trim();
+    console.log(`Login attempt for: ${loginIdentifier}`);
+    
+    const user = await User.findOne({ 
+      $or: [
+        { email: loginIdentifier.toLowerCase() },
+        { username: { $regex: new RegExp(`^${loginIdentifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } }
+      ]
+    });
+
     if (!user) {
+      console.log(`User not found for identifier: ${loginIdentifier}`);
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
     
+    console.log(`User found: ${user.username} (${user.email})`);
+    
     // Check password
     const isMatch = await user.comparePassword(password);
+    console.log(`Password match result: ${isMatch}`);
+    
     if (!isMatch) {
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
@@ -95,7 +116,7 @@ router.post('/login', async (req, res) => {
     );
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).json({ msg: 'Server error' });
   }
 });
 
@@ -106,7 +127,7 @@ router.get('/user', auth, async (req, res) => {
     res.json(user);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).json({ msg: 'Server error' });
   }
 });
 

@@ -6,8 +6,9 @@ const ProtectedRoute = ({ children }) => {
     
     useEffect(() => {
         const checkAuth = () => {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (user && user.token) {
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            if (token && user) {
                 setIsAuthenticated(true);
             } else {
                 setIsAuthenticated(false);

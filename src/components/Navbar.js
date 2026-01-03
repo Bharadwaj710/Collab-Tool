@@ -1,21 +1,46 @@
-import React, { useEffect } from 'react';
+import React, { useEffect,useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Navbar.css';
 import * as bootstrap from 'bootstrap';
 
 const Navbar = () => {
     const navigate = useNavigate();
-    const userString = localStorage.getItem('user');
-    const user = userString ? JSON.parse(userString) : null;
 
     useEffect(() => {
         // Initialize Bootstrap dropdown
         const dropdownElementList = document.querySelectorAll('.dropdown-toggle');
         const dropdownList = [...dropdownElementList].map(dropdownToggleEl => new bootstrap.Dropdown(dropdownToggleEl));
     }, []);
+    const [user, setUser] = useState(
+  localStorage.getItem('user')
+    ? JSON.parse(localStorage.getItem('user'))
+    : null
+);
+
+useEffect(() => {
+  const syncUser = () => {
+    const u = localStorage.getItem('user');
+    setUser(u ? JSON.parse(u) : null);
+  };
+
+  window.addEventListener('storage', syncUser);
+  return () => window.removeEventListener('storage', syncUser);
+}, []);
+
+
+useEffect(() => {
+  const syncUser = () => {
+    const u = localStorage.getItem('user');
+    setUser(u ? JSON.parse(u) : null);
+  };
+
+  window.addEventListener('storage', syncUser);
+  return () => window.removeEventListener('storage', syncUser);
+}, []);
 
     const handleLogout = () => {
         localStorage.removeItem('user');
+        localStorage.removeItem('token');
         navigate('/');
     };
 

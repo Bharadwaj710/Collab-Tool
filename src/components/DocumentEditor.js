@@ -1,633 +1,642 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { io } from 'socket.io-client';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import './DocumentEditor.css';
+import io from 'socket.io-client';
 import axios from 'axios';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const DocumentEditor = () => {
-  const { id: documentId } = useParams();
-  const [document, setDocument] = useState(null);
-  const [content, setContent] = useState('');
-  const [participants, setParticipants] = useState([]);
-  const [socket, setSocket] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [title, setTitle] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const quillRef = useRef(null);
-  const navigate = useNavigate();
-  const socketRef = useRef(null);
-  
-  // Get user and token from localStorage
-  const user = JSON.parse(localStorage.getItem('user')) || { id: 'guest', username: 'Guest' };
-  const token = localStorage.getItem('token');
-  
-  // Redirect if no authentication
-  useEffect(() => {
-    if (!token) {
-      navigate('/login');
-    }
-  }, [token, navigate]);
-  
-  // Fetch document data
-  useEffect(() => {
-    const fetchDocument = async () => {
-      try {
-        setIsLoading(true);
-        console.log(`Fetching document ${documentId} with token:`, token);
+    const { id } = useParams(); // roomId
+    const navigate = useNavigate();
+    const [socket, setSocket] = useState(null);
+    const [version, setVersion] = useState(0);
+    const [participants, setParticipants] = useState([]);
+    const [documentTitle, setDocumentTitle] = useState('Untitled Document');
+    const [status, setStatus] = useState('connecting');
+    const [typingUsers, setTypingUsers] = useState(new Set());
+    const [currentUser, setCurrentUser] = useState(null);
+    
+    // Day 4-7 Features State
+    const [problemStatement, setProblemStatement] = useState('');
+    const [timer, setTimer] = useState({ duration: 0, remaining: 0, isRunning: false });
+    const [chatMessages, setChatMessages] = useState([]);
+    const [privateNotes, setPrivateNotes] = useState([]);
+    const [chatInput, setChatInput] = useState('');
+    const [noteInput, setNoteInput] = useState('');
+
+    const [role, setRole] = useState('participant');
+    const [showChat, setShowChat] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [customTime, setCustomTime] = useState(0);
+
+    const chatEndRef = useRef(null);
+    const showChatRef = useRef(false);
+
+    const [ownerId, setOwnerId] = useState(null);
+
+    const quillRef = useRef(null);
+    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    const saveTimeoutRef = useRef(null);
+    const typingTimeoutRef = useRef(null);
+    
+    useEffect(() => {
+        const userString = localStorage.getItem('user');
+        let user = null;
         
-        // For testing without backend, create mock document
-        if (!API_URL || API_URL === 'http://localhost:5000') {
-          console.log("Using mock document data");
-          
-          // Simulate API delay
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          const mockDocument = {
-            _id: documentId,
-            title: `Untitled Document - ${new Date().toLocaleDateString()}`,
-            content: null,
-            updatedAt: new Date().toISOString()
-          };
-          
-          setDocument(mockDocument);
-          setTitle(mockDocument.title);
-          setIsLoading(false);
-          return;
+        if (userString) {
+            try {
+                user = JSON.parse(userString);
+            } catch (e) {
+                console.error("Failed to parse user string");
+            }
+        }
+
+        if (!user) {
+            user = {
+                id: 'guest-' + Math.random().toString(36).substring(2, 9),
+                username: 'Guest ' + Math.random().toString(36).substring(2, 5).toUpperCase(),
+                role: 'Participant'
+            };
+            localStorage.setItem('user', JSON.stringify(user));
         }
         
-        const response = await axios.get(`${API_URL}/api/documents/${documentId}`, {
-          headers: { 'x-auth-token': token }
+
+        
+        setCurrentUser(user);
+
+        // ROBUSTNESS FIX: Fetch fresh user data from API to ensure username is correct
+        // This fixes the issue where username might be missing or stale in localStorage
+        if (user.token || localStorage.getItem('token')) {
+            const token = user.token || localStorage.getItem('token');
+           axios.get(`${API_URL}/api/users/me`, {
+  headers: { 'x-auth-token': token }
+}).then(res => {
+  const refreshedUser = res.data;
+  setCurrentUser(refreshedUser);
+  localStorage.setItem('user', JSON.stringify(refreshedUser));
+});
+
+        }
+
+        try {
+            const s = io(API_URL, {
+                query: user.token ? { token: user.token } : {},
+                transports: ['websocket', 'polling']
+            });
+            
+            setSocket(s);
+
+            s.on('connect', () => {
+                setStatus('connected');
+                s.emit('join-room', {
+                    roomId: id,
+                    user: {
+                        id: user.id,
+                        name: user.username,
+                        role: user.role
+                    }
+                });
+            });
+
+            s.on('disconnect', () => {
+                setStatus('disconnected');
+            });
+            
+            s.on('connect_error', (err) => {
+                console.error('Socket connection error:', err.message);
+                setStatus('error');
+            });
+            
+            // ISSUE 1: Listen for room-users
+            s.on('room-users', (users) => {
+                setParticipants(users);
+                const myUser = users.find(u => String(u.userId || u.guestId) === String(user.id));
+                if (myUser) setRole(myUser.role);
+            });
+            
+            s.on('full-state', ({ content, version: serverVersion, title, ownerId: serverOwnerId, problemStatement: ps, timer: t, chat, notes }) => {
+                if (quillRef.current) {
+                    const editor = quillRef.current.getEditor();
+                    try {
+                        const delta = JSON.parse(content);
+                        editor.setContents(delta, 'silent');
+                    } catch (e) {
+                        editor.setText(content || '', 'silent');
+                    }
+                }
+                setVersion(serverVersion);
+                if (title) setDocumentTitle(title);
+                if (serverOwnerId) setOwnerId(serverOwnerId);
+                if (ps) setProblemStatement(ps);
+                if (t) setTimer(t);
+                if (chat) setChatMessages(chat);
+                if (notes) setPrivateNotes(notes);
+            });
+
+            s.on('problem-update', ({ problemStatement }) => setProblemStatement(problemStatement));
+            s.on('timer-update', (t) => setTimer(t));
+            s.on('chat-message', (msg) => {
+                // Normalize ids to strings for comparison
+                const senderIdStr = String(msg.senderId);
+                const currentIdStr = String(user.id);
+                
+                // Add message to chat
+                setChatMessages(prev => [...prev, msg]);
+                
+                // Increment unread ONLY if chat is currently closed AND message is NOT from me
+                // Use ref to check current showChat state, not stale closure value
+                setUnreadCount(prevCount => {
+                    const isChatClosed = !showChatRef.current;
+                    const isNotFromMe = senderIdStr !== currentIdStr;
+                    return (isChatClosed && isNotFromMe) ? prevCount + 1 : prevCount;
+                });
+                
+                if (showChatRef.current) {
+                     setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+                }
+            });
+            s.on('note-added', (note) => setPrivateNotes(prev => [...prev, note]));
+            
+            // ISSUE 2: Listen for editor-update
+            s.on('editor-update', ({ content, version: remoteVersion, senderId }) => {
+                if (senderId === user.id) return;
+
+                setVersion(prevVersion => {
+                    if (remoteVersion >= prevVersion) {
+                        if (quillRef.current) {
+                            const editor = quillRef.current.getEditor();
+                            const currentCursor = editor.getSelection();
+                            try {
+                                const delta = JSON.parse(content);
+                                editor.setContents(delta, 'silent');
+                            } catch (e) {
+                                editor.setText(content, 'silent');
+                            }
+                            if (currentCursor) {
+                                editor.setSelection(currentCursor);
+                            }
+                        }
+                        return remoteVersion;
+                    }
+                    return prevVersion;
+                });
+            });
+            
+            s.on('title-update', ({ title }) => {
+                setDocumentTitle(title);
+            });
+
+            s.on('user-typing', ({ username }) => {
+                setTypingUsers(prev => new Set(prev).add(username));
+            });
+            
+            s.on('user-stopped-typing', ({ username }) => {
+                setTypingUsers(prev => {
+                    const next = new Set(prev);
+                    next.delete(username);
+                    return next;
+                });
+            });
+            
+            return () => {
+                s.emit('leave-room', { roomId: id, userId: user.id });
+                s.disconnect();
+            };
+        } catch (error) {
+            console.error('Error setting up document editor:', error);
+            setStatus('error');
+        }
+    }, [id, API_URL]);
+
+    // Timer Logic Effect
+    useEffect(() => {
+        let interval;
+        if (timer.isRunning && timer.remaining > 0) {
+            interval = setInterval(() => {
+                setTimer(prev => {
+                    if (prev.remaining <= 1) return { ...prev, remaining: 0, isRunning: false };
+                    return { ...prev, remaining: prev.remaining - 1 };
+                });
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [timer.isRunning]);
+
+    // Handlers
+    const handleSendChat = () => {
+        if (!chatInput.trim() || !socket || !currentUser) return;
+        const safeSenderName = currentUser.username || currentUser.name || 'Anonymous';
+        socket.emit('send-chat', {
+            roomId: id,
+            message: chatInput,
+            senderId: currentUser.id,
+            senderName: safeSenderName
         });
-        
-        console.log("Document data received:", response.data);
-        setDocument(response.data);
-        setTitle(response.data.title);
-        
-        // If document has content, set it
-        if (response.data.content && quillRef.current) {
-          quillRef.current.getEditor().setContents(response.data.content);
-        }
-        
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error fetching document:', error);
-        
-        // Don't redirect automatically, just show the error
-        setError('Could not load document. It may not exist or you may not have permission to view it.');
-        setIsLoading(false);
-        
-        // Create a blank document anyway to prevent redirect
-        setDocument({
-          _id: documentId,
-          title: `Untitled Document`,
-          content: null,
-          updatedAt: new Date().toISOString()
+        setChatInput('');
+    };
+
+    const handleAddNote = () => {
+        if (!noteInput.trim() || !socket || !currentUser) return;
+        socket.emit('add-note', {
+            roomId: id,
+            text: noteInput,
+            requesterId: currentUser.id
         });
-        setTitle(`Untitled Document`);
-      }
+        setNoteInput('');
     };
-    
-    if (documentId && token) {
-      fetchDocument();
-    }
-  }, [documentId, token, navigate]);
-  
-  // Socket.io setup
-  useEffect(() => {
-    if (!documentId) return;
-    
-    console.log("Initializing socket connection to:", API_URL);
-    
-    // For testing without backend
-    if (!API_URL || API_URL === 'http://localhost:5000') {
-      console.log("Using mock socket for development");
-      // Add a mock participant after a delay
-      setTimeout(() => {
-        setParticipants([
-          { socketId: 'mock-user-1', username: 'Current User (You)', userId: user.id }
-        ]);
-      }, 1000);
-      
-      return;
-    }
-    
-    // Create new socket connection
-    const newSocket = io(API_URL, {
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 20000,
-      transports: ['websocket', 'polling']
-    });
-    
-    socketRef.current = newSocket;
-    
-    newSocket.on('connect', () => {
-      console.log("Socket connected:", newSocket.id);
-      setSocket(newSocket);
-      
-      // Join document room immediately after connection
-      newSocket.emit('join-document', {
-        documentId,
-        userId: user.id,
-        username: user.username || user.email || 'Anonymous'
-      });
-    });
-    
-    newSocket.on('connect_error', (err) => {
-      console.error("Socket connection error:", err);
-      setError(`Could not connect to server: ${err.message}`);
-      
-      // Add current user to participants list even if socket fails
-      setParticipants([{ 
-        socketId: 'local-user', 
-        username: `${user.username || user.email || 'You'} (offline mode)`,
-        userId: user.id
-      }]);
-    });
-    
-    // Set up event handlers
-    newSocket.on('load-document', (documentData) => {
-      console.log("Document content received from socket");
-      if (quillRef.current && documentData.content) {
-        quillRef.current.getEditor().setContents(documentData.content);
-      }
-      if (documentData.title) {
-        setTitle(documentData.title);
-      }
-    });
-    
-    newSocket.on('receive-changes', (delta) => {
-      console.log("Received changes from server");
-      if (quillRef.current) {
-        quillRef.current.getEditor().updateContents(delta);
-      }
-    });
-    
-    newSocket.on('participants-updated', (updatedParticipants) => {
-      console.log("Participants updated:", updatedParticipants);
-      setParticipants(updatedParticipants);
-    });
-    
-    return () => {
-      if (newSocket) {
-        console.log("Disconnecting socket");
-        newSocket.emit('leave-document', { documentId, userId: user.id });
-        newSocket.disconnect();
-      }
+
+    const handleTimerControl = (action, duration) => {
+        if (!socket || !currentUser) return;
+        socket.emit('timer-control', {
+            roomId: id,
+            action,
+            duration,
+            requesterId: currentUser.id
+        });
     };
-  }, [documentId, user.id, user.username, user.email, API_URL]);
-  
-  // Setup Quill editor to send changes to server
-  useEffect(() => {
-    if (!quillRef.current || !socket) return;
-    
-    const quill = quillRef.current.getEditor();
-    
-    const handleChange = (delta, oldContents, source) => {
-      if (source !== 'user') return;
-      
-      console.log("Sending changes to server");
-      socket.emit('send-changes', { documentId, delta });
-      
-      // Debounce save to server
-      handleSaveDocument();
+
+    const handleProblemChange = (e) => {
+        const newProblem = e.target.value;
+        setProblemStatement(newProblem);
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(() => {
+            if (socket && currentUser) {
+                socket.emit('update-problem', {
+                    roomId: id,
+                    problemStatement: newProblem,
+                    requesterId: currentUser.id
+                });
+            }
+        }, 500);
     };
-    
-    quill.on('text-change', handleChange);
-    
-    return () => {
-      quill.off('text-change', handleChange);
+
+    const formatTime = (seconds) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
-  }, [socket, documentId]);
-  
-  // Debounced save function
-  const saveTimeout = useRef(null);
-  
-  const handleSaveDocument = () => {
-    if (saveTimeout.current) {
-      clearTimeout(saveTimeout.current);
-    }
-    
-    saveTimeout.current = setTimeout(async () => {
-      if (!quillRef.current || !documentId || !token) return;
-      
-      try {
-        setIsSaving(true);
-        const quill = quillRef.current.getEditor();
-        const contents = quill.getContents();
+
+    const isPrivileged = role === 'creator' || role === 'interviewer';
+
+    const handleContentChange = useCallback((content, delta, source, editor) => {
+        if (source !== 'user') return;
         
-        console.log("Saving document to server");
-        
-        // For testing without backend
-        if (!API_URL || API_URL === 'http://localhost:5000') {
-          console.log("Mock saving document:", { content: contents, title });
-          // Simulate network delay
-          await new Promise(resolve => setTimeout(resolve, 500));
-          setIsSaving(false);
-          return;
+        // Local version increment
+        setVersion(prev => {
+            const nextVersion = prev + 1;
+
+            // Debounced emit
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+            saveTimeoutRef.current = setTimeout(() => {
+                if (socket && currentUser) {
+                    const editorContents = JSON.stringify(editor.getContents());
+                    socket.emit('editor-change', {
+                        roomId: id,
+                        content: editorContents,
+                        version: nextVersion,
+                        senderId: currentUser.id
+                    });
+                }
+            }, 300);
+
+            return nextVersion;
+        });
+
+        // Typing indication
+        if (socket && currentUser) {
+            socket.emit('user-typing', { roomId: id, username: currentUser.username });
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+            typingTimeoutRef.current = setTimeout(() => {
+                socket.emit('user-stopped-typing', { roomId: id, username: currentUser.username });
+            }, 2000);
         }
-        
-        if (socket && socket.connected) {
-          socket.emit('save-document', { documentId, contents });
+    }, [socket, id, currentUser]);
+
+    const handleCopyLink = () => {
+        const roomLink = `${window.location.origin}/documents/${id}`;
+        navigator.clipboard.writeText(roomLink)
+            .then(() => {
+                toast.success('Link copied to clipboard!');
+            })
+            .catch(err => {
+                console.error('Failed to copy link:', err);
+                toast.error('Failed to copy link');
+            });
+    };
+
+    const handleExport = async () => {
+        if (!currentUser || !currentUser.token) return;
+        try {
+            const response = await fetch(`${API_URL}/api/documents/${id}/export`, {
+                headers: { 'x-auth-token': currentUser.token }
+            });
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `session-export-${id}.md`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                toast.success('Session exported!');
+            } else {
+                toast.error('Export failed');
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error('Export error');
         }
-        
-        // Also save to database
-        await axios.put(
-          `${API_URL}/api/documents/${documentId}`,
-          { content: contents, title },
-          { headers: { 'x-auth-token': token } }
-        );
-        
-        console.log("Document saved successfully");
-      } catch (error) {
-        console.error("Error saving document:", error);
-        setError("Failed to save document. Changes may be lost if you leave the page.");
-      } finally {
-        setIsSaving(false);
-      }
-    }, 2000); // Save after 2 seconds of inactivity
-  };
-  
-  // Save title changes
-  const handleTitleChange = (e) => {
-    setTitle(e.target.value);
-  };
-  
-  const handleTitleBlur = async () => {
-    if (!documentId || !token) return;
-    
-    try {
-      // For testing without backend
-      if (!API_URL || API_URL === 'http://localhost:5000') {
-        console.log("Mock updating title:", title);
-        return;
-      }
-      
-      await axios.put(
-        `${API_URL}/api/documents/${documentId}`,
-        { title },
-        { headers: { 'x-auth-token': token } }
-      );
-      console.log("Title updated successfully");
-      
-      // Also update via socket if connected
-      if (socket && socket.connected) {
-        socket.emit('update-title', { documentId, title });
-      }
-    } catch (error) {
-      console.error("Error updating title:", error);
-      setError("Failed to update document title");
-    }
-  };
-  
-  // Copy room link to clipboard
-  const copyLinkToClipboard = () => {
-    const link = `${window.location.origin}/documents/${documentId}`;
-    navigator.clipboard.writeText(link)
-      .then(() => {
-        alert('Link copied to clipboard!');
-      })
-      .catch((err) => {
-        console.error('Failed to copy link:', err);
-        // Fallback for browsers that don't support clipboard API
-        const tempInput = document.createElement('input');
-        tempInput.value = link;
-        document.body.appendChild(tempInput);
-        tempInput.select();
-        document.execCommand('copy');
-        document.body.removeChild(tempInput);
-        alert('Link copied to clipboard!');
-      });
-  };
-  
-  // Leave document
-  const handleLeave = () => {
-    // Ensure we emit leave-document before navigating away
-    if (socketRef.current) {
-      socketRef.current.emit('leave-document', { documentId, userId: user.id });
-    }
-    navigate('/dashboard');
-  };
-  
-  // Define Quill modules and formats
-  const modules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'color': [] }, { 'background': [] }],
-      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-      [{ 'indent': '-1' }, { 'indent': '+1' }],
-      ['link', 'image'],
-      ['clean']
-    ]
-  };
-  
-  const formats = [
-    'header', 'bold', 'italic', 'underline', 'strike',
-    'color', 'background', 'list', 'bullet', 'indent',
-    'link', 'image'
-  ];
-  
-  if (isLoading) {
+    };
+
+    const handleTitleChange = (e) => {
+        const newTitle = e.target.value;
+        setDocumentTitle(newTitle);
+        if (socket && id) {
+            socket.emit('title-change', { roomId: id, title: newTitle });
+        }
+    };
+
+    const handleLeave = () => {
+        navigate('/');
+    };
+
     return (
-      <div className="document-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading document...</p>
-      </div>
+        <div className="editor-container">
+            <div className="editor-sidebar">
+                <div className="participants-section">
+                    <div className="status-indicator" style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', gap: '0.5rem' }}>
+                        <div style={{ 
+                            width: '12px', 
+                            height: '12px', 
+                            borderRadius: '50%', 
+                            backgroundColor: status === 'connected' ? '#2ecc71' : status === 'connecting' ? '#f1c40f' : '#e74c3c' 
+                        }}></div>
+                        <span style={{ color: '#fff' }}>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
+                    </div>
+                    {participants.length > 0 && (
+                        <>
+                            <h3 style={{ color: '#fff' }}>Participants ({participants.length})</h3>
+                            <div className="participants-list">
+                                    {participants.map((participant, index) => {
+                                        const pId = participant.userId || participant.guestId;
+                                        const isMe = String(pId) === String(currentUser?.id);
+                                        const role = participant.role;
+                                        const isOnline = participant.isOnline;
+                                        const name = participant.name || 'Anonymous';
+                                        
+                                        let badgeColor = '#2ecc71'; // Default Green (Participant)
+                                        let badgeLabel = role;
+
+                                        if (role === 'creator') {
+                                            badgeColor = '#e67e22'; // Orange
+                                            badgeLabel = 'Creator';
+                                        } else if (role === 'interviewer') {
+                                            badgeColor = '#3498db'; // Blue
+                                            badgeLabel = 'Interviewer';
+                                        } else if (role === 'candidate') {
+                                            badgeColor = '#9b59b6'; // Purple
+                                            badgeLabel = 'Candidate';
+                                        }
+
+                                        const amICreator = participants.some(p => p.role === 'creator' && String(p.userId) === String(currentUser?.id));
+
+                                        return (
+                                            <div key={index} className="participant" style={{ 
+                                                padding: '10px', 
+                                                marginBottom: '6px', 
+                                                background: 'rgba(255,255,255,0.08)', 
+                                                borderRadius: '6px',
+                                                borderLeft: `4px solid ${isOnline ? badgeColor : '#7f8c8d'}`,
+                                                opacity: isOnline ? 1 : 0.6,
+                                                fontWeight: isMe ? 'bold' : 'normal',
+                                                transition: 'all 0.2s ease',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '5px'
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <div style={{ 
+                                                        fontSize: '0.95rem', 
+                                                        color: '#fff', 
+                                                        whiteSpace: 'nowrap', 
+                                                        overflow: 'hidden', 
+                                                        textOverflow: 'ellipsis', 
+                                                        maxWidth: '120px' 
+                                                    }}>
+                                                        {name} {isMe ? '(Me)' : ''}
+                                                        {role === 'creator' && <span title="Creator"> 👑</span>}
+                                                        {!isOnline && <span style={{ fontSize: '0.7rem', marginLeft: '5px', opacity: 0.7 }}>(Offline)</span>}
+                                                    </div>
+                                                    
+                                                    {amICreator && !isMe ? (
+                                                        <select 
+                                                            className="role-select"
+                                                            value={role}
+                                                            onChange={(e) => {
+                                                                const newRole = e.target.value;
+                                                                socket.emit('update-participant-role', {
+                                                                    roomId: id,
+                                                                    targetUserId: participant.userId,
+                                                                    targetGuestId: participant.guestId,
+                                                                    newRole: newRole,
+                                                                    requesterId: currentUser.id
+                                                                });
+                                                            }}
+                                                        >
+                                                            <option value="participant">Participant</option>
+                                                            <option value="interviewer">Interviewer</option>
+                                                            <option value="candidate">Candidate</option>
+                                                        </select>
+                                                    ) : (
+                                                        <span style={{ 
+                                                            fontSize: '0.65rem', 
+                                                            padding: '2px 8px', 
+                                                            borderRadius: '12px', 
+                                                            backgroundColor: isOnline ? badgeColor : '#7f8c8d', 
+                                                            color: '#fff',
+                                                            textTransform: 'uppercase',
+                                                            fontWeight: 'bold',
+                                                            letterSpacing: '0.5px',
+                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                                        }}>
+                                                            {badgeLabel}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {typingUsers.has(name) && (
+                                                    <div style={{ fontSize: '0.7rem', color: '#f1c40f', fontStyle: 'italic', marginTop: '2px' }}>
+                                                        typing...
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                        </>
+                    )}
+                </div>
+                <div className="sidebar-buttons">
+                    <button onClick={handleCopyLink} className="btn btn-primary" style={{ width: '100%', marginBottom: '0.5rem' }}>
+                        Copy Link
+                    </button>
+                    {isPrivileged && (
+                        <button onClick={handleExport} className="btn" style={{ width: '100%', marginBottom: '0.5rem', background: '#8e44ad', color: 'white' }}>
+                            Export Session
+                        </button>
+                    )}
+                    <button onClick={handleLeave} className="btn btn-danger" style={{ width: '100%' }}>
+                        Leave
+                    </button>
+                    {/* Chat button removed from here, now FAB */}
+                </div>
+                
+                <div className="panels-container">
+                    {/* Timer Panel */}
+                    <div className="timer-display">{formatTime(timer.remaining)}</div>
+                    {isPrivileged && (
+                        <div className="timer-controls">
+                             <div style={{ display: 'flex', gap: '5px', marginBottom: '5px', justifyContent: 'center' }}>
+                                <input 
+                                    type="number" 
+                                    value={customTime} 
+                                    onChange={(e) => setCustomTime(e.target.value)} 
+                                    style={{ width: '50px', padding: '2px', fontSize: '0.8rem', borderRadius: '4px', border: 'none' }}
+                                    min="1"
+                                />
+                                <button onClick={() => handleTimerControl('start', customTime * 60)} className="btn-sm" style={{fontSize: '0.7rem', padding: '2px 4px', background: '#2ecc71'}}>Set & Start</button>
+                             </div>
+                            {timer.isRunning ? 
+                                <button onClick={() => handleTimerControl('pause')} className="btn-sm" style={{fontSize: '0.7rem', padding: '2px 8px', background: '#f1c40f', color: '#000'}}>Pause ⏸</button> :
+                                <button onClick={() => handleTimerControl('start')} className="btn-sm" style={{fontSize: '0.7rem', padding: '2px 8px', background: '#2ecc71'}}>Resume ▶</button>
+                            }
+                            <button onClick={() => handleTimerControl('reset')} className="btn-sm" style={{fontSize: '0.7rem', padding: '2px 8px', background: '#e74c3c'}}>Reset ↺</button>
+                        </div>
+                    )}
+
+                </div>
+                    {isPrivileged && (
+                        <div className="notes-panel">
+                            <h4 style={{ color: '#fff', fontSize: '0.9rem', marginBottom: '5px' }}>Private Notes 🔒</h4>
+                            <div className="notes-list">
+                                {privateNotes.map((note, i) => (
+                                    <div key={i} className="note-card">
+                                        <div className="note-header">
+                                            <small>{new Date(note.timestamp).toLocaleTimeString()}</small>
+                                        </div>
+                                        <p>{note.text}</p>
+                                    </div>
+                                ))}
+                            </div>
+                            <input 
+                                value={noteInput}
+                                onChange={(e) => setNoteInput(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && handleAddNote()}
+                                className="note-input"
+                                placeholder="Add private note..."
+                                style={{ width: '100%' }}
+                            />
+                        </div>
+                    )}
+                    
+                {/* Floating Chat Button (FAB) */}
+                <button 
+                    className="chat-fab"
+                    onClick={() => {
+                        const newShowChat = !showChat;
+                        setShowChat(newShowChat);
+                        showChatRef.current = newShowChat;
+                        if (newShowChat) {
+                             setUnreadCount(0);
+                             setTimeout(() => chatEndRef.current?.scrollIntoView(), 100);
+                        }
+                    }}
+                >
+                    💬
+                    {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+                </button>
+
+                    {/* Chat Panel - Now a Popup */}
+                    {showChat && (
+                        <div className="chat-popup">
+                            <div className="chat-header">
+                                <h4>Group Chat</h4>
+                                <button onClick={() => setShowChat(false)} className="close-btn">×</button>
+                            </div>
+                            <div className="chat-messages">
+                                {chatMessages.map((msg, i) => (
+                                    <div key={i} className="chat-msg">
+                                        <strong style={{ color: '#4facfe' }}>{msg.senderName}: </strong>
+                                        <span>{msg.message}</span>
+                                    </div>
+                                ))}
+                                <div ref={chatEndRef} />
+                            </div>
+                            <input 
+                                value={chatInput}
+                                onChange={(e) => setChatInput(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && handleSendChat()}
+                                className="chat-input"
+                                placeholder="Type a message..."
+                            />
+                        </div>
+                    )}
+                </div>
+            <div className="editor-main" style={{ background: '#fff', position: 'relative' }}>
+                
+                {/* Problem Statement - Top of Main */}
+                <div className="problem-section-top">
+                     <h4 style={{ margin: '0 0 5px 0', fontSize: '0.9rem', color: '#555' }}>Problem Statement</h4>
+                     {isPrivileged ? (
+                        <textarea 
+                            value={problemStatement} 
+                            onChange={handleProblemChange} 
+                            className="problem-input-top"
+                            rows={2}
+                            placeholder="Enter problem statement here..."
+                        />
+                    ) : (
+                        <div className="problem-display-top">
+                            {problemStatement || "Waiting for problem statement..."}
+                        </div>
+                    )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '10px 10px 0 10px' }}>
+                    <input
+                        type="text"
+                        value={documentTitle}
+                        onChange={handleTitleChange}
+                        className="document-title"
+                        style={{ border: 'none', fontSize: '1.5rem', fontWeight: 'bold', outline: 'none', flexGrow: 1 }}
+                    />
+                    <div className="typing-indicator" style={{ fontSize: '0.8rem', color: '#666', fontStyle: 'italic', minHeight: '1.2rem' }}>
+                        {typingUsers.size > 0 && Array.from(typingUsers).join(', ') + (typingUsers.size === 1 ? ' is ' : ' are ') + 'typing...'}
+                    </div>
+                </div>
+                <ReactQuill
+                    ref={quillRef}
+                    onChange={handleContentChange}
+                    theme="snow"
+                    className="editor"
+                    modules={{
+                        toolbar: [
+                            [{ 'header': [1, 2, 3, false] }],
+                            ['bold', 'italic', 'underline', 'strike'],
+                            [{ 'color': [] }, { 'background': [] }],
+                            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                            ['link', 'image'],
+                            ['clean']
+                        ]
+                    }}
+                    style={{ height: 'calc(100vh - 120px)' }}
+                />
+            </div>
+        </div>
     );
-  }
-  
-  return (
-    <div className="document-editor">
-      <style>{`
-        /* Document Editor Styles */
-        .document-editor {
-          display: flex;
-          flex-direction: column;
-          height: 100vh;
-          overflow: hidden;
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        .editor-header {
-          background-color: #f8f9fa;
-          padding: 1rem 2rem;
-          border-bottom: 1px solid #e9ecef;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-        
-        .document-title {
-          flex: 1;
-          margin: 0;
-          padding: 0.5rem;
-          font-size: 1.5rem;
-          color: #343a40;
-          font-weight: 600;
-          border: 1px solid transparent;
-          border-radius: 4px;
-          background-color: transparent;
-        }
-        
-        .document-title:focus {
-          border-color: #80bdff;
-          outline: 0;
-          box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-          background-color: white;
-        }
-        
-        .save-status {
-          font-size: 0.85rem;
-          color: #6c757d;
-          margin-left: 1rem;
-        }
-        
-        .editor-container {
-          display: flex;
-          flex: 1;
-          overflow: hidden;
-        }
-        
-        .sidebar {
-          width: 280px;
-          background-color: #f8f9fa;
-          border-right: 1px solid #e9ecef;
-          display: flex;
-          flex-direction: column;
-          padding: 1rem;
-        }
-        
-        .participants-list {
-          margin-bottom: 1rem;
-        }
-        
-        .participants-list h3 {
-          font-size: 1rem;
-          color: #343a40;
-          margin-bottom: 0.5rem;
-        }
-        
-        .participant-item {
-          display: flex;
-          align-items: center;
-          padding: 0.5rem;
-          border-radius: 4px;
-          margin-bottom: 0.25rem;
-        }
-        
-        .participant-avatar {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background-color: #4285f4;
-          color: white;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: bold;
-          margin-right: 0.75rem;
-        }
-        
-        .participant-name {
-          font-size: 0.9rem;
-          color: #343a40;
-        }
-        
-        .actions {
-          margin-top: auto;
-          display: flex;
-          flex-direction: column;
-          gap: 0.75rem;
-          padding-top: 1rem;
-          border-top: 1px solid #e9ecef;
-        }
-        
-        .editor-wrapper {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-          overflow: hidden;
-        }
-        
-        .error-message {
-          color: #d93025;
-          padding: 0.5rem;
-          margin: 0.5rem;
-          border-radius: 4px;
-          background-color: #fce8e6;
-        }
-        
-        .document-loading {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          background-color: #f8f9fa;
-        }
-        
-        .loading-spinner {
-          border: 4px solid #f3f3f3;
-          border-top: 4px solid #4285f4;
-          border-radius: 50%;
-          width: 40px;
-          height: 40px;
-          animation: spin 1s linear infinite;
-          margin-bottom: 1rem;
-        }
-        
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
-        /* Override ReactQuill styles for better integration */
-        .editor-wrapper .quill {
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-        }
-        
-        .editor-wrapper .ql-container {
-          flex: 1;
-          overflow-y: auto;
-          font-size: 16px;
-        }
-        
-        .editor-wrapper .ql-toolbar {
-          border-top: none;
-          border-left: none;
-          border-right: none;
-          border-bottom: 1px solid #e9ecef;
-          background-color: #f8f9fa;
-        }
-        
-        /* Button styles */
-        .btn {
-          padding: 0.75rem 1rem;
-          border: none;
-          border-radius: 4px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          text-align: center;
-        }
-        
-        .btn-primary {
-          background-color: #4285f4;
-          color: white;
-        }
-        
-        .btn-primary:hover {
-          background-color: #3367d6;
-        }
-        
-        .btn-secondary {
-          background-color: #6c757d;
-          color: white;
-        }
-        
-        .btn-secondary:hover {
-          background-color: #5a6268;
-        }
-        
-        /* Media queries for responsiveness */
-        @media (max-width: 768px) {
-          .editor-container {
-            flex-direction: column;
-          }
-          
-          .sidebar {
-            width: 100%;
-            height: auto;
-            border-right: none;
-            border-bottom: 1px solid #e9ecef;
-          }
-          
-          .actions {
-            flex-direction: row;
-            justify-content: space-between;
-            padding-top: 0.5rem;
-          }
-          
-          .btn {
-            flex: 1;
-          }
-        }
-      `}</style>
-      
-      <div className="editor-header">
-        <input
-          type="text"
-          className="document-title"
-          value={title || 'Untitled Document'}
-          onChange={handleTitleChange}
-          onBlur={handleTitleBlur}
-        />
-        <div className="save-status">
-          {isSaving ? 'Saving...' : 'All changes saved'}
-        </div>
-      </div>
-      
-      {error && <div className="error-message">{error}</div>}
-      
-      <div className="editor-container">
-        <div className="sidebar">
-          <div className="participants-list">
-            <h3>Participants ({participants.length})</h3>
-            {participants.length === 0 && (
-              <div className="participant-item">
-                <div className="participant-avatar">
-                  {user.username ? user.username[0].toUpperCase() : 'Y'}
-                </div>
-                <div className="participant-name">
-                  {user.username || user.email || 'You'} (Only you)
-                </div>
-              </div>
-            )}
-            {participants.map((participant) => (
-              <div key={participant.socketId} className="participant-item">
-                <div className="participant-avatar">
-                  {participant.username ? participant.username[0].toUpperCase() : '?'}
-                </div>
-                <div className="participant-name">
-                  {participant.username || 'Anonymous'}
-                  {participant.userId === user.id ? ' (You)' : ''}
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          <div className="actions">
-            <button onClick={copyLinkToClipboard} className="btn btn-primary">
-              Copy Link
-            </button>
-            <button onClick={handleLeave} className="btn btn-secondary">
-              Back to Dashboard
-            </button>
-          </div>
-        </div>
-        
-        <div className="editor-wrapper">
-          <ReactQuill
-            ref={quillRef}
-            theme="snow"
-            value={content}
-            onChange={setContent}
-            modules={modules}
-            formats={formats}
-            placeholder="Start typing..."
-          />
-        </div>
-      </div>
-    </div>
-  );
 };
 
 export default DocumentEditor;

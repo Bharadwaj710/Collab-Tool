@@ -25,6 +25,17 @@ const UserSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  profile: {
+    avatarSeed: {
+      type: String,
+      default: () => Math.random().toString(36).substring(2, 15)
+    },
+    bio: {
+      type: String,
+      trim: true,
+      default: ''
+    }
   }
 });
 
@@ -48,45 +59,3 @@ UserSchema.methods.comparePassword = async function(candidatePassword) {
 
 const User = mongoose.model('User', UserSchema);
 module.exports = User;
-
-// models/Document.js
-const mongoose = require('mongoose');
-
-const DocumentSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true,
-    trim: true,
-    default: 'Untitled Document'
-  },
-  content: {
-    type: Object,
-    default: {}
-  },
-  owner: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  collaborators: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
-});
-
-// Update the updatedAt timestamp before saving
-DocumentSchema.pre('save', function(next) {
-  this.updatedAt = new Date();
-  next();
-});
-
-const Document = mongoose.model('Document', DocumentSchema);
-module.exports = Document;

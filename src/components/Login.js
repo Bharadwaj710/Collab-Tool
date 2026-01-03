@@ -4,17 +4,18 @@ import axios from 'axios';
 import './Auth.css';
 import BackgroundEffect from './BackgroundEffect.js';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const Login = () => {
     const loginButtonRef = useRef(null);
     const [formData, setFormData] = useState({
-        username: '',
+        identifier: '',
         password: ''
     });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
-    // Check if user is already logged in
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (token) {
@@ -35,60 +36,25 @@ const Login = () => {
         setError('');
         
         try {
-            // For testing purposes, we'll manually log in the user
-            // This will bypass API login until we fix backend issues
-            const mockToken = 'temp-token-' + Math.random().toString(36).substring(2, 15);
-            
-            // Store token directly in localStorage
-            localStorage.setItem('token', mockToken);
-            
-            // Also store user data for reference if needed
-            localStorage.setItem('user', JSON.stringify({
-                username: formData.username,
-                token: mockToken
-            }));
-            
-            // Wait a bit to simulate network latency
-            setTimeout(() => {
-                setLoading(false);
-                navigate('/dashboard');
-            }, 1000);
-            
-            // Comment out the actual API call for now
-            /*
-            const response = await axios.post('http://localhost:5000/api/users/login', {
-                username: formData.username,
+            console.log('Attempting login for:', formData.identifier);
+            const response = await axios.post(`${API_URL}/api/users/login`, {
+                identifier: formData.identifier,
                 password: formData.password
             });
             
-            // Store token directly in localStorage
-            localStorage.setItem('token', response.data.token);
+            console.log('Login response received:', response.status);
             
-            // Also store user data separately
-            localStorage.setItem('user', JSON.stringify({
-                username: formData.username,
-                token: response.data.token
-            }));
+            // Store token and user data
+            localStorage.setItem('token', response.data.token);
+            localStorage.setItem('user', JSON.stringify(response.data.user));
             
             setLoading(false);
             navigate('/dashboard');
-            */
-            
         } catch (err) {
             setLoading(false);
-            
-            // Enhanced error handling to show more specific errors
-            if (err.response) {
-                console.error('Error response:', err.response.data);
-                console.error('Status code:', err.response.status);
-                setError(`Login failed: ${err.response.data.message || err.response.statusText}`);
-            } else if (err.request) {
-                console.error('No response received:', err.request);
-                setError('No response from server. Please check your internet connection.');
-            } else {
-                console.error('Request error:', err.message);
-                setError(`Request error: ${err.message}`);
-            }
+            const msg = err.response?.data?.msg || err.response?.data?.message || err.message;
+            console.error('Login error:', msg);
+            setError(`Login failed: ${msg}`);
         }
     };
 
@@ -102,15 +68,15 @@ const Login = () => {
                     <div className="form-group">
                         <input
                             type="text"
-                            id="username"
-                            name="username"
-                            value={formData.username}
+                            id="identifier"
+                            name="identifier"
+                            value={formData.identifier}
                             onChange={handleChange}
                             placeholder=" " 
                             required
                             disabled={loading}
                         />
-                        <label htmlFor="username">Username</label>
+                        <label htmlFor="identifier">Username or Email</label>
                     </div>
                     <div className="form-group">
                         <input

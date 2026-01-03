@@ -6,7 +6,7 @@ import Dashboard from './components/Dashboard';
 import Navbar from './components/Navbar';
 import LandingPage from './components/LandingPage';
 import ProtectedRoute from './components/ProtectedRoute';
-import DocumentEditor from './components/DocumentEditor'; // Add this import
+import DocumentEditor from './components/DocumentEditor';
 
 function App() {
     return (
@@ -24,17 +24,9 @@ function App() {
                             <Dashboard />
                         </ProtectedRoute>
                     } />
-                    {/* New routes for real-time document editing */}
-                    <Route path="/documents/:id" element={
-                        <ProtectedRoute>
-                            <DocumentEditor />
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/join/:id" element={
-                        <ProtectedRoute>
-                            <DocumentEditor />
-                        </ProtectedRoute>
-                    } />
+                    {/* Publicly accessible routes for collaboration */}
+                    <Route path="/documents/:id" element={<DocumentEditor />} />
+                    <Route path="/join/:id" element={<DocumentEditor />} />
                     
                     {/* Catch all route */}
                     <Route path="*" element={<Navigate to="/" />} />
