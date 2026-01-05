@@ -8,7 +8,15 @@ const DocumentSchema = new mongoose.Schema({
   },
   content: {
     type: Object,
-    default: { ops: [{ insert: '\n' }] }
+    default: { ops: [{ insert: '\n' }] } // Legacy field - kept for safety
+  },
+  discussionContent: {
+    type: Object,
+    default: { type: 'doc', content: [] } // TipTap JSON
+  },
+  code: {
+    language: { type: String, default: 'javascript' },
+    source: { type: String, default: '// Write your code here\n' }
   },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
@@ -34,7 +42,12 @@ const DocumentSchema = new mongoose.Schema({
       enum: ['connected', 'disconnected'], 
       default: 'connected' 
     },
-    joinedAt: { type: Date, default: Date.now }
+    joinedAt: { type: Date, default: Date.now },
+    privateNotes: [{
+      id: { type: String },
+      text: { type: String },
+      timestamp: { type: Date, default: Date.now }
+    }]
   }],
   problemStatement: {
     type: String,

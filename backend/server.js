@@ -4,7 +4,7 @@ const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
 const dotenv = require('dotenv');
-const setupSocketHandlers = require('./SocketHandler');
+const setupSocketHandlers = require('./Sockethandler');
 
 // Routes
 const authRoutes = require('./routes/auth');
@@ -57,10 +57,11 @@ mongoose.connect(MONGO_URI, {
 app.use('/api/users', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/documents', documentRoutes);
+app.use('/api/execute', require('./routes/execute'));
 
 // Root route for health check
 app.get('/', (req, res) => {
-  res.send('CollabTool API is running');
+  res.send('Converge API is running');
 });
 
 // Handle 404
