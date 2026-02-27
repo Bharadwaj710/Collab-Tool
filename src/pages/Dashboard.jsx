@@ -4,7 +4,7 @@ import axios from '../api/axios';
 import ProfileModal from '../components/ProfileModal';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const Dashboard = () => {
   const [documents, setDocuments] = useState([]);
@@ -102,19 +102,6 @@ const Dashboard = () => {
     } catch (error) {
       toast.error('Failed to update profile');
     }
-  };
-
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
-  };
-
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 }
   };
 
   return (

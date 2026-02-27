@@ -6,12 +6,15 @@ export const useSocket = (roomId, user) => {
     const [socket, setSocket] = useState(null);
     const [status, setStatus] = useState('connecting');
     const socketRef = useRef(null);
+    const userId = user?._id || user?.id;
+    const username = user?.username;
+    const userRole = user?.role;
 
     useEffect(() => {
-        if (!roomId || !user) return;
+        if (!roomId || !userId) return;
 
         const s = io(API_BASE_URL, {
-            query: { roomId, userId: user._id || user.id },
+            query: { roomId, userId },
             transports: ['websocket', 'polling']
         });
 
@@ -21,13 +24,13 @@ export const useSocket = (roomId, user) => {
         s.on('connect', () => {
             setStatus('connected');
             // Emit join-room with consistent user structure
-            console.log(`[Frontend] Joining room: ${roomId} as ${user.username}`);
+            console.log(`[Frontend] Joining room: ${roomId} as ${username}`);
             s.emit('join-room', {
                 roomId,
                 user: {
-                    id: user._id || user.id,
-                    name: user.username,
-                    role: user.role
+                    id: userId,
+                    name: username,
+                    role: userRole
                 }
             });
         });
@@ -40,8 +43,8 @@ export const useSocket = (roomId, user) => {
                 s.disconnect();
             }
         };
-        // Only reconnect if roomId changes or user ID changes
-    }, [roomId, user?._id, user?.id]); 
+        // Only reconnect if room or user identity fields change
+    }, [roomId, userId, username, userRole]); 
 
     return { socket, status };
 };

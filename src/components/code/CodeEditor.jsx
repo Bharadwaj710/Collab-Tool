@@ -9,7 +9,7 @@ const CodeEditor = ({ code, language, onChange, onLanguageChange, isReadOnly = f
     if (code !== undefined && code !== value) {
         setValue(code);
     }
-  }, [code]);
+  }, [code, value]);
 
   const handleEditorChange = (newValue) => {
     setValue(newValue);

@@ -152,7 +152,7 @@ const DocumentEditor = () => {
             socket.off('user-stopped-typing');
             socket.off('user-kicked');
         };
-    }, [socket, currentUser]);
+    }, [socket, currentUser, navigate]);
 
     // Timer Logic
     useEffect(() => {

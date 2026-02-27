@@ -19,7 +19,7 @@ const ChatPopup = ({
             setUnreadCount(0);
             setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         }
-    }, [showChat, chatMessages]);
+    }, [showChat, chatMessages, setUnreadCount]);
 
     const handleToggleChat = () => {
         const next = !showChat;

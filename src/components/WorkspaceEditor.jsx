@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import DiscussionEditor from './discussion/DiscussionEditor';
 import CodeEditor from './code/CodeEditor';
 import CodeRunner from './code/CodeRunner';
@@ -9,8 +9,7 @@ const WorkspaceEditor = ({ socket, roomId, currentUser, isReadOnly, initialData,
   const [discussionContent, setDiscussionContent] = useState(initialData?.discussionContent || null);
   const [codeData, setCodeData] = useState(initialData?.code || { language: 'javascript', source: '' });
   
-  // Helper to get robust ID
-  const getCurrentUserId = () => currentUser?._id || currentUser?.id;
+  const currentUserId = currentUser?._id || currentUser?.id;
 
   // Real-time Listeners
   useEffect(() => {
@@ -18,14 +17,14 @@ const WorkspaceEditor = ({ socket, roomId, currentUser, isReadOnly, initialData,
 
     socket.on('discussion-update', ({ content, userId }) => {
         console.log('[Workspace] Discussion Update Recv', userId);
-        if (String(userId) !== String(getCurrentUserId())) {
+        if (String(userId) !== String(currentUserId)) {
             setDiscussionContent(content);
         }
     });
 
     socket.on('code-update', ({ code, language, userId }) => {
         console.log('[Workspace] Code Update Recv', userId);
-        if (String(userId) !== String(getCurrentUserId())) {
+        if (String(userId) !== String(currentUserId)) {
             setCodeData({ source: code, language });
         }
     });
@@ -34,7 +33,7 @@ const WorkspaceEditor = ({ socket, roomId, currentUser, isReadOnly, initialData,
         socket.off('discussion-update');
         socket.off('code-update');
     };
-  }, [socket, currentUser]); // Depends on currentUser ref
+  }, [socket, currentUserId]);
 
   // Sync initialData if it changes later (e.g. from full-state)
   useEffect(() => {
@@ -74,7 +73,7 @@ const WorkspaceEditor = ({ socket, roomId, currentUser, isReadOnly, initialData,
     socket.emit('discussion-change', { 
         roomId, 
         content, 
-        userId: getCurrentUserId()
+        userId: currentUserId
     });
   };
 
@@ -86,7 +85,7 @@ const WorkspaceEditor = ({ socket, roomId, currentUser, isReadOnly, initialData,
         roomId, 
         code: newCode, 
         language: codeData.language, 
-        userId: getCurrentUserId()
+        userId: currentUserId
     });
   };
 
@@ -97,7 +96,7 @@ const WorkspaceEditor = ({ socket, roomId, currentUser, isReadOnly, initialData,
          roomId,
          code: codeData.source,
          language: lang,
-         userId: getCurrentUserId()
+         userId: currentUserId
      });
   };
 

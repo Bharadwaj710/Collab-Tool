@@ -106,7 +106,7 @@ const CodeRunner = ({ code, language, isReadOnly }) => {
                     <pre className={`whitespace-pre-wrap break-all text-xs font-mono leading-relaxed ${
                         activeTab === 'stderr' || activeTab === 'compile' ? 'text-red-400' : 'text-gray-300'
                     }`}>
-                        {(activeTab === 'stdout' ? output.stdout : (activeTab === 'stderr' ? output.stderr : output.compile_output)) || <span className="text-gray-600 italic">// No output to display</span>}
+                        {(activeTab === 'stdout' ? output.stdout : (activeTab === 'stderr' ? output.stderr : output.compile_output)) || <span className="text-gray-600 italic">No output to display</span>}
                     </pre>
                 </div>
             )}
