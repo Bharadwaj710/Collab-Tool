@@ -15,24 +15,44 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
+const normalizeOrigin = (origin = '') => origin.trim().replace(/\/+$/, '');
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://collab-tool1.vercel.app',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+]
+  .filter(Boolean)
+  .map(normalizeOrigin);
+
+const uniqueAllowedOrigins = [...new Set(allowedOrigins)];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+
+    const normalizedOrigin = normalizeOrigin(origin);
+    if (uniqueAllowedOrigins.includes(normalizedOrigin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'x-auth-token', 'Authorization']
+};
+
 // Configure Socket.IO with proper CORS settings
 const io = socketIo(server, {
-  cors: {
-    origin: "*", // In production, change to specific domains
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true,
-    allowedHeaders: ["*"]
-  },
-  pingTimeout: 60000, // Increase timeout
-  transports: ['websocket', 'polling'] // Enable both transports
+  cors: corsOptions,
+  pingTimeout: 60000,
+  transports: ['websocket', 'polling']
 });
 
 // Middleware
-app.use(cors({
-  origin: '*', // In production, change to specific domains
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
-}));
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 app.use(express.json({ limit: '10mb' })); // Increase payload limit
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

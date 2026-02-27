@@ -1,8 +1,9 @@
 // services/documentService.js
 import axios from 'axios';
+import { API_BASE_URL } from '../config/api';
 
 // ✅ Correct Vite env usage
-const API_URL = `${import.meta.env.VITE_API_URL}/api/documents`;
+const API_URL = `${API_BASE_URL}/api/documents`;
 
 // ✅ Correct token source
 const getToken = () => {

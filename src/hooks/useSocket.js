@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+import { API_BASE_URL } from '../config/api';
 
 export const useSocket = (roomId, user) => {
     const [socket, setSocket] = useState(null);
@@ -11,8 +10,9 @@ export const useSocket = (roomId, user) => {
     useEffect(() => {
         if (!roomId || !user) return;
 
-        const s = io(API_URL, {
-            query: { roomId, userId: user._id || user.id }
+        const s = io(API_BASE_URL, {
+            query: { roomId, userId: user._id || user.id },
+            transports: ['websocket', 'polling']
         });
 
         socketRef.current = s;
